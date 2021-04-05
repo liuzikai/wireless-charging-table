@@ -3,6 +3,7 @@
 #define CONTROL_H
 
 #define NUM_COILS   3
+#define BAUD        19200 // For the serial port /dev/ttyTHS1 (board pin 8&10) or COM (USB)
 
 #include <vector>
 
@@ -16,6 +17,10 @@ public:
     control();
     // ~control();
 
+
+private:
+    /********************************* GPIO Controls *****************************/
+    
     /**
      * Initialize the GPIO pins for collecting wireless charging coil information
      */
@@ -28,6 +33,12 @@ public:
      *          pin assignment array above.
      */
     std::vector<int> GPIO_read_inputs();
+
+
+    /********************************* Mechanical Controls *****************************/
+    int move_x();
+    int move_y();
+
 
 
 };
