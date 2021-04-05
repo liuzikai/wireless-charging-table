@@ -1,4 +1,3 @@
-
 #ifndef CONTROL_H
 #define CONTROL_H
 
@@ -10,11 +9,12 @@
 static const int coil_pins[NUM_COILS] = {9, 10, 11};
 
 
-class control{
+class Control {
 
 public:
-    control();
-    // ~control();
+    Control();
+
+    // ~Control();
 
     /**
      * Initialize the GPIO pins for collecting wireless charging coil information

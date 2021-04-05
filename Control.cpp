@@ -1,5 +1,4 @@
-
-#include "control.h"
+#include "Control.h"
 
 // for delay function.
 #include <chrono> 
@@ -11,11 +10,11 @@
 
 using namespace std;
 
-control::control(){
+Control::Control(){
     GPIO_init();
 }
 
-int control::GPIO_init(){
+int Control::GPIO_init(){
     GPIO::setmode(GPIO::BCM); // Set the pin number mode to be BCM
 
     for (int i = 0; i < NUM_COILS; i++){
@@ -25,7 +24,7 @@ int control::GPIO_init(){
     return 0;
 }
 
-vector<int> control::GPIO_read_inputs(){
+vector<int> Control::GPIO_read_inputs(){
     vector<int> ret;
 
     for (int i = 0; i < NUM_COILS; i++){
