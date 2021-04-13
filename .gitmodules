@@ -1,4 +1,0 @@
-[submodule "lib/JetsonGPIO"]
-	path = lib/JetsonGPIO
-	url = https://github.com/pjueon/JetsonGPIO.git
-	branch = master
