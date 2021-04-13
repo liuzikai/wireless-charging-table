@@ -10,22 +10,25 @@ message("    Version: " ${OpenCV_VERSION})
 message("    Libraries: " ${OpenCV_LIBRARIES})
 message("    Includes: " ${OpenCV_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
+# Find boost
+find_package(Boost REQUIRED system)
+
+include_directories(include)
 add_executable(QiTable
-        Control.cpp
-        Vision.cpp
-        Camera.cpp
-        Device_manager.cpp
-        main.cpp)
+        src/Control.cpp
+        src/Vision.cpp
+        src/Camera.cpp
+        src/DeviceManager.cpp
+        src/main.cpp)
 
 add_executable(VisionUnitTest
-        Camera.cpp
-        Device_manager.cpp
-        Vision.cpp)
-add_executable(mytest
-               test.cpp)
-# link OpenCV library correctly.
-target_link_libraries(mytest ${OpenCV_LIBS})
+        src/Vision.cpp)
+
+add_executable(GrabberUnitTest
+        src/GrabberController.cpp
+        tests/GrabberUnitTest.cpp)
+
 target_link_libraries(QiTable ${OpenCV_LIBS})
 target_link_libraries(VisionUnitTest ${OpenCV_LIBS})
+target_link_libraries(GrabberUnitTest ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY})

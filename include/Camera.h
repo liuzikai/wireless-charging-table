@@ -5,7 +5,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "Common.h"
+#include "../Common.h"
 #include <thread>
 // #include <atomic>
 #include <opencv2/highgui/highgui.hpp>
