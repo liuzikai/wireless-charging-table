@@ -1,18 +1,7 @@
-#include <opencv2/core.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/objdetect.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core/types.hpp>
-
-#include <iostream>
-#include <vector>
-#include <stdio.h>
-#include <math.h>
-#include <termios.h>
-#include <unistd.h>
-#include <sys/fcntl.h>
-
+#include "Vision.h"
+#include "Camera.h"
+#include "Common.h"
+#include "Device_manager.h"
 #define GPU 0
 
 #if GPU
@@ -23,10 +12,8 @@
 using namespace cv;
 using namespace std;
 // height and width in millimeter
-#define TABLE_WIDTH 800
-#define TABLE_HEIGHT 500
-#define FRAME_WIDTH 800
-#define FRAME_HEIGHT 500
+
+
 
 
 // flag for show image 
@@ -41,17 +28,18 @@ using namespace std;
 #define BLUR_KERNEL_SIZE 9
 #define MIN_CONTOUR_AREA 50
 #define MIN_CONTOUR_PIXEL 50
-
+SharedParameters sharedParams;
+Camera::ParameterSet cameraParams;
 
 // for random color
 RNG rng(12345);
 
 // helper function 
-void processing(Mat &frame);
+// void processing(Mat &frame);
 
-void drawRotatedRect(Mat &img, const RotatedRect &rect, const Scalar &boarderColor);
+// void drawRotatedRect(Mat &img, const RotatedRect &rect, const Scalar &boarderColor);
 
-vector <RotatedRect> find_bounding_box(Mat &image_BrightnessThreshold, Mat &drawing);
+// vector <RotatedRect> find_bounding_box(Mat &image_BrightnessThreshold, Mat &drawing);
 
 vector <Point> get_real_location(vector <RotatedRect> &BoundingBox, int image_width, int image_height);
 
@@ -67,6 +55,8 @@ int main(int argc, char **argv) {
     // open the file for data transmission
 
 #if CAMERA
+    // Camera my_camera;
+    // my_camera.open(sharedParams, cameraParams);
     //--- INITIALIZE VIDEOCAPTURE ------
     VideoCapture cap;
     // open the default camera using default API
@@ -77,8 +67,8 @@ int main(int argc, char **argv) {
     // open selected camera using selected API
     cap.open(deviceID, apiID);
     // set the resolution of camera
-    cap.set(CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-    cap.set(CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+    cap.set(CAP_PROP_FRAME_WIDTH, sharedParams.imageWidth);
+    cap.set(CAP_PROP_FRAME_HEIGHT, sharedParams.imageHeight);
     cout << "frame width is " << cap.get(CAP_PROP_FRAME_WIDTH) <<
          "frame height is " << cap.get(CAP_PROP_FRAME_HEIGHT) << endl;
     // check if we succeeded
@@ -107,9 +97,14 @@ int main(int argc, char **argv) {
             break;
 #endif
         // store the image  
-        imwrite("test.jpg", frame);
+        // Mat frame=my_camera.getFrame();
+        // imwrite("test.jpg", frame);
         // call a function to process the image, passing by reference
-        processing(frame);
+        Vision my_vision;
+        vector <Point> locations_image;
+        locations_image=my_vision.processing(frame);
+        Device_manager devices_manager_interface;
+        
     }
 #endif
 
@@ -133,7 +128,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void processing(Mat &frame) {
+vector <Point> Vision::processing(Mat &frame) {
     // good source of image processing 
     // https://docs.opencv.org/3.4/d2/d96/tutorial_py_table_of_contents_imgproc.html
     Mat gray_image;
@@ -168,12 +163,12 @@ void processing(Mat &frame) {
     waitKey(5);
 #endif
     Mat drawing = Mat::zeros(image_BrightnessThreshold_black_obj.size(), CV_8UC3);
-    vector <RotatedRect> BoundingBox = find_bounding_box(image_BrightnessThreshold_black_obj, drawing);
+    vector <RotatedRect> BoundingBox = this->find_bounding_box(image_BrightnessThreshold_black_obj, drawing);
 
 
     threshold(gray_image_blur, image_BrightnessThreshold_white_obj, 210, 255, THRESH_BINARY);
     imwrite("test_threshold_white_obj.jpg", image_BrightnessThreshold_white_obj);
-    vector <RotatedRect> BoundingBox_white = find_bounding_box(image_BrightnessThreshold_white_obj, drawing);
+    vector <RotatedRect> BoundingBox_white = this->find_bounding_box(image_BrightnessThreshold_white_obj, drawing);
     // now draw the rectangle on the mat
     //  TO DO: change it to use draw annoted function
     BoundingBox.insert(BoundingBox.end(), BoundingBox_white.begin(), BoundingBox_white.end());
@@ -182,9 +177,9 @@ void processing(Mat &frame) {
     for (auto &rect: BoundingBox) {
         // color are specified in (B,G,R); 
         // draw bounding box on contour
-        drawRotatedRect(drawing, rect, Scalar(0, 255, 255));
+        this->drawRotatedRect(drawing, rect, Scalar(0, 255, 255));
         // draw bounding box on original image
-        drawRotatedRect(frame, rect, Scalar(0, 255, 255));
+        this->drawRotatedRect(frame, rect, Scalar(0, 255, 255));
 
         // cout << "(" << rect.center.x << ", " << rect.center.y << ")    "
         //     << rect.size.width << " x " << rect.size.height << "    "
@@ -199,26 +194,17 @@ void processing(Mat &frame) {
 #endif
     // locate possible bounding box for the phone/airpods
     // the bounding box has been filtered
-    vector <Point> locations = get_real_location(BoundingBox, frame.cols, frame.rows);
+    vector <Point> locations;
+    for (auto &rect: BoundingBox) {
+        locations.emplace_back(Point(rect.center.x , rect.center.y));
+    }
     for (auto &point: locations) {
         cout << "(" << point.x << "," << point.y << ")" << endl;
     }
-    sending_location(locations);
+    return locations;
 }
 
 
-void sending_location(vector <Point> locations) {
-    // open the file
-    // /dev/ttyTHS1 is used in real case
-    //  may use /dev/null as the development process, can write to it
-
-
-
-    // write some content 
-
-
-
-}
 // (0,0)----x----
 // |             |
 // y             y
@@ -233,7 +219,7 @@ void sending_location(vector <Point> locations) {
 // (577.053, 79.5175)    244.472 x 592.656    -53.4007°
 
 
-vector <RotatedRect> find_bounding_box(Mat &image_BrightnessThreshold, Mat &drawing) {
+vector <RotatedRect> Vision::find_bounding_box(Mat &image_BrightnessThreshold, Mat &drawing) {
     // find counter (it find contour of white object from black background on binary image, )
     // In OpenCV, finding contours is like finding white object from black background. 
     // So remember, object to be found should be white and background should be black.
@@ -294,24 +280,10 @@ vector <RotatedRect> find_bounding_box(Mat &image_BrightnessThreshold, Mat &draw
 }
 
 
-// we have a list of suitable candidate bounding box, we want to
-// identify the suitable one and generate the location of the bounding box
-vector <Point> get_real_location(vector <RotatedRect> &BoundingBox, int image_width, int image_height) {
-    // here we assume that the width of image exactly include the width of table
-    // the height of the image exactly include the height of table
-    // we assume the upper left corner of the image is the (0,0)
-    vector <Point> real_locations;
-    for (auto &rect: BoundingBox) {
-        int real_x = TABLE_WIDTH * (rect.center.x / image_width);
-        int real_y = TABLE_HEIGHT * (rect.center.y / image_height);
-        real_locations.emplace_back(Point(real_x, real_y));
-    }
-    return real_locations;
-}
 
 
 // draw the rect on the image
-void drawRotatedRect(Mat &img, const RotatedRect &rect, const Scalar &boarderColor) {
+void Vision::drawRotatedRect(Mat &img, const RotatedRect &rect, const Scalar &boarderColor) {
     cv::Point2f vertices[4];
     rect.points(vertices);
     for (int i = 0; i < 4; i++) {
