@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.10)
 project(Qi_Table)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -23,6 +23,8 @@ add_executable(QiTable
         src/main.cpp)
 
 add_executable(VisionUnitTest
+        src/DeviceManager.cpp
+        src/Camera.cpp
         src/Vision.cpp)
 
 add_executable(GrabberUnitTest
@@ -30,5 +32,5 @@ add_executable(GrabberUnitTest
         tests/GrabberUnitTest.cpp)
 
 target_link_libraries(QiTable ${OpenCV_LIBS})
-target_link_libraries(VisionUnitTest ${OpenCV_LIBS})
+target_link_libraries(VisionUnitTest ${OpenCV_LIBS} pthread)
 target_link_libraries(GrabberUnitTest ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY})

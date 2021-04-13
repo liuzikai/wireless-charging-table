@@ -1,7 +1,7 @@
 #include "Vision.h"
 #include "Camera.h"
 #include "Common.h"
-#include "Device_manager.h"
+#include "DeviceManager.h"
 #define GPU 0
 
 #if GPU
@@ -41,9 +41,9 @@ RNG rng(12345);
 
 // vector <RotatedRect> find_bounding_box(Mat &image_BrightnessThreshold, Mat &drawing);
 
-vector <Point> get_real_location(vector <RotatedRect> &BoundingBox, int image_width, int image_height);
+// vector <Point> get_real_location(vector <RotatedRect> &BoundingBox, int image_width, int image_height);
 
-void sending_location(vector <Point> locations);
+// void sending_location(vector <Point> locations);
 // calibrate the image 
 // https://docs.opencv.org/master/d6/d55/tutorial_table_of_content_calib3d.html
 // https://docs.opencv.org/master/d4/d94/tutorial_camera_calibration.html
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
         Vision my_vision;
         vector <Point> locations_image;
         locations_image=my_vision.processing(frame);
-        Device_manager devices_manager_interface;
+        DeviceManager devices_manager_interface;
         
     }
 #endif

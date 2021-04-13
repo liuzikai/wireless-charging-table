@@ -44,13 +44,13 @@ void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations) {
         // If this is a totally new point, insert this point and the member count
         if (false == flag) {
             // Set the member count as 1
-            locationMap.insert(std::pair<cv::Point, int>(point, 1));
+            locationMap.emplace_back(std::pair<cv::Point, int>{point, 1});
         }
     }
     // Then find the deleted point
-
+    int pos=0;
     for (auto &x:locationMap) {
-        bool flag = false;
+        bool flag = false;    
         for (auto &point:locations) {
             // Check whether location map's position is in the new point list
             flag = flag || this->withinMargin(x.first, point);
@@ -60,11 +60,12 @@ void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations) {
             x.second -= 1;
             if (0 == x.second) {
                 // If reach the max, put into inserted queue
-                // deleted.emplace_back(*(x.first));
+                deleted.emplace_back(x.first);
                 // Remove this from the map
-                // locationMap.erase(*(x.first));
+                locationMap.erase(pos+locationMap.begin());
             }
         }
+        pos++;
     }
 
 }
