@@ -3,3 +3,5 @@ cmake-build-*/
 *.icloud
 ~*
 .idea/
+.vscode/
+build/
