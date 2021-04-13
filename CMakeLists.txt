@@ -14,12 +14,18 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 # Find boost
 find_package(Boost REQUIRED system)
 
+# Compile lib from source
+add_subdirectory(lib)
+
+# Header search path for all targets
 include_directories(include)
+
 add_executable(QiTable
         src/Control.cpp
         src/Vision.cpp
         src/Camera.cpp
         src/DeviceManager.cpp
+        src/GPIOManager.cpp
         src/main.cpp)
 
 add_executable(VisionUnitTest
