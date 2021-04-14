@@ -51,6 +51,7 @@ RNG rng(12345);
 // set the file descriptor as a 
 
 
+
 int main(int argc, char **argv) {
     // open the file for data transmission
 
@@ -70,7 +71,7 @@ int main(int argc, char **argv) {
     cap.set(CAP_PROP_FRAME_WIDTH, sharedParams.imageWidth);
     cap.set(CAP_PROP_FRAME_HEIGHT, sharedParams.imageHeight);
     cout << "frame width is " << cap.get(CAP_PROP_FRAME_WIDTH) <<
-         "frame height is " << cap.get(CAP_PROP_FRAME_HEIGHT) << endl;
+         " frame height is " << cap.get(CAP_PROP_FRAME_HEIGHT) << endl;
     // check if we succeeded
     if (!cap.isOpened()) {
         cerr << "ERROR! Unable to open camera\n";
@@ -78,7 +79,9 @@ int main(int argc, char **argv) {
     }
     //--- GRAB AND WRITE LOOP ----- 
     cout << "Start streaming the video" << endl;
-
+    // !!!!!!! Declaration of this variable must be the outside of the for loop
+    // otherwise the location map will be overwrite every time
+    DeviceManager devices_manager_interface;
     for (;;) {
         Mat frame;
         // wait for a new frame from camera and store it into 'frame'
@@ -101,10 +104,28 @@ int main(int argc, char **argv) {
         // imwrite("test.jpg", frame);
         // call a function to process the image, passing by reference
         Vision my_vision;
-        vector <Point> locations_image;
-        locations_image=my_vision.processing(frame);
-        DeviceManager devices_manager_interface;
+        vector <Point> image_locations;
+        image_locations=my_vision.processing(frame);
+        cout<<"detected positions"<<endl;
+        for (auto &point: image_locations) {
+            cout << "(" << point.x << "," << point.y << ")" << endl;
+        }
+        vector<cv::Point> inserted;
+        vector<cv::Point> deleted;
         
+        devices_manager_interface.updateLocationMapping(image_locations, inserted, deleted);
+        cout<<"inserted positions"<<endl;
+        for(auto& point:inserted){
+           
+            cout << "(" << point.x << "," << point.y << ")" << endl;
+        }
+        cout<<"removed positions"<<endl;
+        for(auto& point:deleted){
+            
+            cout << "(" << point.x << "," << point.y << ")" << endl;
+        }
+
+
     }
 #endif
 
@@ -198,9 +219,7 @@ vector <Point> Vision::processing(Mat &frame) {
     for (auto &rect: BoundingBox) {
         locations.emplace_back(Point(rect.center.x , rect.center.y));
     }
-    for (auto &point: locations) {
-        cout << "(" << point.x << "," << point.y << ")" << endl;
-    }
+
     return locations;
 }
 

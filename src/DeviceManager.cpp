@@ -1,14 +1,13 @@
 #include "DeviceManager.h"
 #include "Common.h"
-
+#include <iostream>
 #define TABLE_WIDTH 500
 #define TABLE_HEIGHT 500
 #define ERROR_MARGIN 20
 #define MAX_THRESHOLD 10
+using namespace std;
+void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations, vector<cv::Point>& inserted, vector<cv::Point>& deleted) {
 
-void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations) {
-    vector<cv::Point> inserted;
-    vector<cv::Point> deleted;
     
     // Iterate through all new locations in the new frame
     // First check is there any new point inserted
@@ -21,7 +20,7 @@ void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations) {
             
             // If there is one point in new frame can be mapped into  the old location in the map
             flag = flag || this->withinMargin(point, x.first);
-            
+            // cout<<" point value "<<point<<" location map value "<<x.first<<" flag value " <<flag<<endl;
             // If there is a point within error of margin
             if (true == flag) {
                 // Update field member
@@ -32,9 +31,11 @@ void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations) {
                 } else {
                     // If it is below the max count, add one
                     x.second += 1;
+                    // cout<<"reach increse member count !!!"<<endl;
                     if (MAX_THRESHOLD == x.second) {
                         // If reach the max, put into inserted queue
                         inserted.emplace_back(x.first);
+                        presentedDevice.emplace_back(x.first);
                     }
                 }
                 break;
@@ -47,27 +48,54 @@ void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations) {
             locationMap.emplace_back(std::pair<cv::Point, int>{point, 1});
         }
     }
-    // Then find the deleted point
-    int pos=0;
+    cout<< " after the insertion update "<<locationMap.size()<<endl;
     for (auto &x:locationMap) {
-        bool flag = false;    
+        cout<<"pos "<<x.first<<" member count "<<x.second<<endl;
+    }
+    // need to check member count
+    // Then find the deleted point
+    vector <std::pair<cv::Point, int>> locationMap_new;
+    // https://www.techiedelight.com/remove-elements-vector-inside-loop-cpp/
+    for (auto &x:locationMap) {
+        bool flag = false;   
+        
         for (auto &point:locations) {
             // Check whether location map's position is in the new point list
             flag = flag || this->withinMargin(x.first, point);
         }
+        // cout<<" pos in map (check remove) "<<x.first<<" point value "<<point<<" flag value " <<flag<<endl;
         // If we don't find the map value in the new location vector
         if (false == flag) {
-            x.second -= 1;
+            // means this location is no longer found in the 
             if (0 == x.second) {
-                // If reach the max, put into inserted queue
-                deleted.emplace_back(x.first);
-                // Remove this from the map
-                locationMap.erase(pos+locationMap.begin());
-            }
+                // If reach the max, put into deleted queue
+                // iterate through presentedDevice to see whether we really 
+                // need to remove it or this device to be removed is just a sudden change
+                bool deleteFlag=false;
+                for (auto& point:presentedDevice){
+                    deleteFlag = deleteFlag || this->withinMargin(x.first, point);
+                }
+                if (true==deleteFlag){
+                    deleted.emplace_back(x.first);
+                    // Remove this from the map
+                    cout<<"going to delete this point"<<endl;
+                }
+            }else{
+                cout<<"going to decrease the member count"<<endl;
+                x.second -= 1;
+                locationMap_new.emplace_back(x);
+            }  
+        }else{
+            // cout<<" update location map "<<endl;
+            locationMap_new.emplace_back(x);
         }
-        pos++;
     }
-
+    
+    locationMap=locationMap_new;
+    cout<<" after the deletion update "<<locationMap.size()<<endl;
+    for (auto &x:locationMap) {
+        cout<<"pos "<<x.first<<" member count "<<x.second<<endl;
+    }
 }
 
 bool DeviceManager::withinMargin(const cv::Point &curPoint, const cv::Point &refPoint) {
@@ -77,11 +105,16 @@ bool DeviceManager::withinMargin(const cv::Point &curPoint, const cv::Point &ref
     // |            |
     // --------------
     // y
-
-    if (curPoint.x > refPoint.x - ERROR_MARGIN &&
-        curPoint.x < refPoint.x + ERROR_MARGIN &&
-        curPoint.y > refPoint.y - ERROR_MARGIN &&
-        curPoint.y < refPoint.y - ERROR_MARGIN) {
+    // cout<<"first arg "<<curPoint.x<<" "<<curPoint.y<<endl;
+    // cout<<"second arg "<<refPoint.x<<"  "<<refPoint.y<<endl;
+    // cout<<" 1 "<<(curPoint.x > refPoint.x - ERROR_MARGIN) << endl;
+    // cout<<" 2 "<<(curPoint.x < refPoint.x + ERROR_MARGIN) <<endl;
+    // cout<<" 3 "<<(curPoint.y > refPoint.y - ERROR_MARGIN) <<endl;
+    // cout<<" 4 "<<(curPoint.y < refPoint.y - ERROR_MARGIN) <<endl;
+    if ((curPoint.x > refPoint.x - ERROR_MARGIN) &&
+        (curPoint.x < refPoint.x + ERROR_MARGIN) &&
+        (curPoint.y > refPoint.y - ERROR_MARGIN) &&
+        (curPoint.y < refPoint.y + ERROR_MARGIN) ) {
         return true;
     } else {
         return false;

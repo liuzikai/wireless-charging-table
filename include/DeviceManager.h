@@ -17,7 +17,7 @@ public:
 
     bool withinMargin(const cv::Point &curPoint, const cv::Point &refPoint);
 
-    void updateLocationMapping(const vector <cv::Point> &locations);
+    void updateLocationMapping(const vector <cv::Point> &locations, vector<cv::Point>& inserted, vector<cv::Point>& deleted);
 
     void sendingLocation(const vector <cv::Point> &locations);
 
@@ -27,6 +27,7 @@ private:
 
     // member variable
     vector <std::pair<cv::Point, int>> locationMap;
+    vector<cv::Point> presentedDevice;
 };
 
 #endif //DEVICE_MANAGER_H
