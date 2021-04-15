@@ -19,15 +19,15 @@ public:
 
     void updateLocationMapping(const vector <cv::Point> &locations, vector<cv::Point>& inserted, vector<cv::Point>& deleted);
 
-    void sendingLocation(const vector <cv::Point> &locations);
+    void sendingLocation(const vector<cv::Point>& inserted, const vector<cv::Point>& deleted);
 
-    vector <cv::Point> getRealLocation(const vector <cv::RotatedRect> &boundingBox, int imageWidth, int imageHeight);
+    vector <cv::Point> getRealLocation(const vector <cv::Point> &locations, int imageWidth, int imageHeight);
 
 private:
 
     // member variable
     vector <std::pair<cv::Point, int>> locationMap;
-    vector<cv::Point> presentedDevice;
+    vector <cv::Point> presentedDevice;
 };
 
 #endif //DEVICE_MANAGER_H

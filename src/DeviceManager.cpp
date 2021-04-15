@@ -48,10 +48,10 @@ void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations, ve
             locationMap.emplace_back(std::pair<cv::Point, int>{point, 1});
         }
     }
-    cout<< " after the insertion update "<<locationMap.size()<<endl;
-    for (auto &x:locationMap) {
-        cout<<"pos "<<x.first<<" member count "<<x.second<<endl;
-    }
+    // cout<< " after the insertion update "<<locationMap.size()<<endl;
+    // for (auto &x:locationMap) {
+        // cout<<"pos "<<x.first<<" member count "<<x.second<<endl;
+    // }
     // need to check member count
     // Then find the deleted point
     vector <std::pair<cv::Point, int>> locationMap_new;
@@ -78,10 +78,10 @@ void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations, ve
                 if (true==deleteFlag){
                     deleted.emplace_back(x.first);
                     // Remove this from the map
-                    cout<<"going to delete this point"<<endl;
+                    // cout<<"going to delete this point"<<endl;
                 }
             }else{
-                cout<<"going to decrease the member count"<<endl;
+                // cout<<"going to decrease the member count"<<endl;
                 x.second -= 1;
                 locationMap_new.emplace_back(x);
             }  
@@ -92,10 +92,10 @@ void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations, ve
     }
     
     locationMap=locationMap_new;
-    cout<<" after the deletion update "<<locationMap.size()<<endl;
-    for (auto &x:locationMap) {
-        cout<<"pos "<<x.first<<" member count "<<x.second<<endl;
-    }
+    // cout<<" after the deletion update "<<locationMap.size()<<endl;
+    // for (auto &x:locationMap) {
+    //     cout<<"pos "<<x.first<<" member count "<<x.second<<endl;
+    // }
 }
 
 bool DeviceManager::withinMargin(const cv::Point &curPoint, const cv::Point &refPoint) {
@@ -122,7 +122,7 @@ bool DeviceManager::withinMargin(const cv::Point &curPoint, const cv::Point &ref
 
 }
 
-void DeviceManager::sendingLocation(const vector <cv::Point> &locations) {
+void DeviceManager::sendingLocation(const vector<cv::Point>& inserted, const vector<cv::Point>& deleted) {
     // open the file
     // /dev/ttyTHS1 is used in real case
     //  may use /dev/null as the development process, can write to it
@@ -132,15 +132,15 @@ void DeviceManager::sendingLocation(const vector <cv::Point> &locations) {
 
 // We have a list of suitable candidate bounding box, we want to
 // Identify the suitable one and generate the location of the bounding box
-vector<cv::Point> DeviceManager::getRealLocation(const vector <cv::RotatedRect> &boundingBox, int imageWidth, int imageHeight) {
+vector<cv::Point> DeviceManager::getRealLocation(const vector <cv::Point> &locations, int imageWidth, int imageHeight) {
     // Here we assume that the width of image exactly include the width of table
     // The height of the image exactly include the height of table
     // We assume the upper left corner of the image is the (0,0)
     
     vector<cv::Point> realLocations;
-    for (const auto &rect: boundingBox) {
-        int real_x = TABLE_WIDTH * (rect.center.x / imageWidth);
-        int real_y = TABLE_HEIGHT * (rect.center.y / imageHeight);
+    for (const auto &point: locations) {
+        int real_x = TABLE_WIDTH * (point.x / imageWidth);
+        int real_y = TABLE_HEIGHT * (point.y / imageHeight);
         realLocations.emplace_back(cv::Point(real_x, real_y));
     }
     return realLocations;

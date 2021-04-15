@@ -106,24 +106,24 @@ int main(int argc, char **argv) {
         Vision my_vision;
         vector <Point> image_locations;
         image_locations=my_vision.processing(frame);
-        cout<<"detected positions"<<endl;
-        for (auto &point: image_locations) {
-            cout << "(" << point.x << "," << point.y << ")" << endl;
-        }
+        // cout<<"detected positions"<<endl;
+        // for (auto &point: image_locations) {
+        //     cout << "(" << point.x << "," << point.y << ")" << endl;
+        // }
         vector<cv::Point> inserted;
         vector<cv::Point> deleted;
         
         devices_manager_interface.updateLocationMapping(image_locations, inserted, deleted);
-        cout<<"inserted positions"<<endl;
-        for(auto& point:inserted){
+        // cout<<"inserted positions"<<endl;
+        // for(auto& point:inserted){
            
-            cout << "(" << point.x << "," << point.y << ")" << endl;
-        }
-        cout<<"removed positions"<<endl;
-        for(auto& point:deleted){
+        //     cout << "(" << point.x << "," << point.y << ")" << endl;
+        // }
+        // cout<<"removed positions"<<endl;
+        // for(auto& point:deleted){
             
-            cout << "(" << point.x << "," << point.y << ")" << endl;
-        }
+        //     cout << "(" << point.x << "," << point.y << ")" << endl;
+        // }
 
 
     }
@@ -178,7 +178,7 @@ vector <Point> Vision::processing(Mat &frame) {
     // smaller threshold means the pixel need to be dark enough to be set to light
     // --------- thresholding the image ----------
     threshold(gray_image_blur, image_BrightnessThreshold_black_obj, 50, 255, THRESH_BINARY_INV);
-    imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
+    // imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
 #if SHOW_THRESHOLD_IMAGE
     imshow("thresholding", image_BrightnessThreshold_black_obj);
     waitKey(5);
@@ -188,7 +188,7 @@ vector <Point> Vision::processing(Mat &frame) {
 
 
     threshold(gray_image_blur, image_BrightnessThreshold_white_obj, 210, 255, THRESH_BINARY);
-    imwrite("test_threshold_white_obj.jpg", image_BrightnessThreshold_white_obj);
+    // imwrite("test_threshold_white_obj.jpg", image_BrightnessThreshold_white_obj);
     vector <RotatedRect> BoundingBox_white = this->find_bounding_box(image_BrightnessThreshold_white_obj, drawing);
     // now draw the rectangle on the mat
     //  TO DO: change it to use draw annoted function
@@ -207,7 +207,7 @@ vector <Point> Vision::processing(Mat &frame) {
         //     << rect.angle << "°"<<endl;
     }
     // imwrite( "test_contours_filter.jpg", drawing );
-    imwrite("test_annoted.jpg", frame);
+    // imwrite("test_annoted.jpg", frame);
 
 #if SHOW_ANNOTED_IMAGE
     imshow("annoted", frame);
