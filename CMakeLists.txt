@@ -37,6 +37,11 @@ add_executable(GrabberUnitTest
         src/GrabberController.cpp
         tests/GrabberUnitTest.cpp)
 
+add_executable(ChargerManagerUnitTest
+        src/ChargerManager.cpp
+        tests/ChargerManagerUnitTest.cpp)
+
 target_link_libraries(QiTable ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} JetsonGPIO)
 target_link_libraries(VisionUnitTest ${OpenCV_LIBS} pthread)
 target_link_libraries(GrabberUnitTest ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY})
+target_link_libraries(ChargerManagerUnitTest JetsonGPIO)
