@@ -7,12 +7,11 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 using std::string;
 using std::stringstream;
 using std::vector;
-
-
 
 template<typename T>
 struct Range {

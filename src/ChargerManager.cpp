@@ -6,6 +6,8 @@
 #include <iostream>
 #include <JetsonGPIO.h>
 
+constexpr unsigned ChargerManager::UPDATE_INTERVAL_MS;
+
 ChargerManager::ChargerManager() {
     GPIO::setmode(GPIO::NumberingModes::BCM);
     threadShouldExit = false;
@@ -52,6 +54,6 @@ void ChargerManager::update() {
             green[i] = newGreen;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds (UPDATE_INTERVAL_MS));
+        std::this_thread::sleep_for(std::chrono::milliseconds(UPDATE_INTERVAL_MS));
     }
 }
