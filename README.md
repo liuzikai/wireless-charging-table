@@ -1,6 +1,15 @@
 This is SP21 ECE445/ME470 code for team 24 at ZJUI
 
-## Setup GPIO
+## GPIO Connections
+| Charger | Red Pin | Green Pin |
+|---------|---------|-----------|
+| 0       | 9       | 10        |
+
+GPIO pins are indexed in BCM mode:
+
+![Jetson Nano Pins](extra/JetsonNano-expansion-pinout.png)
+
+## Setup GPIO Permission on Jetson Nano
 Adapted from [JetsonGPIO README](https://github.com/pjueon/JetsonGPIO#setting-user-permissions)
 
 In order to use the Jetson GPIO Library, the correct user permissions/groups must  
