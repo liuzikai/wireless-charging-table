@@ -21,14 +21,14 @@
 #include <sys/fcntl.h>
 
 
-using namespace cv;
-using namespace std;
+// using namespace cv;
+// using namespace std;
 
 class Vision {
 public:
     // member variable
     // member function
-    vector <Point> processing(Mat &frame);
+    std::vector <cv::Point> processing(Mat &frame);
     void drawRotatedRect(Mat &img, const RotatedRect &rect, const Scalar &boarderColor);
     vector <RotatedRect> find_bounding_box(Mat &image_BrightnessThreshold, Mat &drawing);
 };
