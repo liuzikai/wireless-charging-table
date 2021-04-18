@@ -9,6 +9,8 @@
 
 #include <JetsonGPIO.h>
 #include <set>
+#include <map>
+#include <algorithm>
 
 #include "../include/Control.h"
 
@@ -27,6 +29,9 @@ static pthread_t pin_thread[ChargerManager::CHARGER_COUNT];
 static volatile bool visionNeedsHandling;
 static volatile vector<cv::Point> newDevices;
 static volatile vector<cv::Point> removedDevices;
+
+// TODO: Move to charger manager
+static const vector<cv::Point> initialPositions;
 
 // static pthread_mutex_t pin_locks[ChargerManager::CHARGER_COUNT]; 
 
@@ -88,10 +93,10 @@ int scheduleWaiting(){
         if (curStatus == ChargerManager::UNKNOWN) {
             usleep(500000);
             curStatus = chargerManager.getChargerStatus(i);
-        }
 
-        if (curStatus == ChargerManager::UNKNOWN){
-            ERROR_("Pull charging status failed");
+            if (curStatus == ChargerManager::UNKNOWN){
+                ERROR_("Pull charging status failed");
+            }
         }
 
         // Handle if there is a new status
@@ -167,9 +172,10 @@ int scheduleWaiting(){
                 
             }
         }
-    }
 
-    visionNeedsHandling = false;
+        visionNeedsHandling = false;
+
+    }
 
     if (toIgnore.size() != 0){
         ERROR_("Conflict message from wireless and vision!");
@@ -202,15 +208,81 @@ int scheduleCalculating(){
     }
     
     // Schedule the charging of devices if there are any
-
     // Collect ChargerManager::CHARGER_COUNT devices and reschedule all of them
+    set<cv::Point> curSchedule;
+    int availableCoils = idelCoilCount;
+    while(toSchedule.size() > 0 && availableCoils > 0){
+        auto curDevice = *toSchedule.begin();
+        curSchedule.insert(curDevice);
+        toSchedule.erase(curDevice);
+        availableCoils--;
+    }
 
-    // Move the coils to corner if there are idel ones
+    // New device to schedule
+    if (curSchedule.size() > 0){
+        // Collect currently charging devices into the scheduling
+        for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
+            if (oldStatus[i] == ChargerManager::CHARGING){
+                curSchedule.insert(curCoilPositions[i]);
+            }
+        }
+
+        // Assign the coils according to the device location
+        // Method: [assign the coil to the device] that have the cloest distance its initial position
+        unordered_map<int, cv::Point> coilTarget;
+        for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
+            
+            // Didn't use map here since the distance may be the same for different devices
+            vector<pair<double, cv::Point> > distance; 
+            
+            // Collect the distances
+            for (const auto& device : curSchedule){
+                distance.push_back(make_pair(cv::norm(initialPositions[i] - device), device));
+            }
+
+            // Sort the distances
+            sort(distance.begin(), distance.end(), 
+                [] (const pair<double, cv::Point>& a, const pair<double, cv::Point>& b) -> bool {
+                    return a.first < b.first;
+                });
+            
+            // Add the device with the smallest distance to be the target
+            cv::Point curTarget = distance[0].second;
+            curSchedule.erase(curTarget);
+            if (curTarget != curCoilPositions[i]) coilTarget[i] = curTarget;
+            
+        }
+        
+        // Fill the moving queue TODO: Does the order matter?
+        for (const auto& target : coilTarget){
+            movingCommands.push_back(make_pair(curCoilPositions[target.first], target.second));
+        }
+    }
+
+    // Move the coils to corner if there are idle ones
+    for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
+        if (oldStatus[i] == ChargerManager::NOT_CHARGING && coilTarget.find(i) == coilTarget.end()){
+            movingCommands.push_back(curCoilPositions[i], initialPositions[i]);
+        }
+    }
+
     
+    if(movingCommands.size() > 0) curState = MOVING1;
+    else curState = WAITING;
+
     return 0;
 }
 
 int scheduleMoving1(){
+    // Send the moving commands
+    while(!movingCommands.empty()){
+        auto c = movingCommands.pop_front();
+        grabberController.issueGrabberMovement(c.first.x, c.first.y, c.second.x, c.second.y);
+    }
+    
+    // Wait until complete and check the final wireless charging status ?
+
+    curState = WAITING;
     return 0;
 }
 

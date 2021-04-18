@@ -7,8 +7,10 @@
 #include <unordered_map>
 #include <string>
 #include <set>
+#include <queue>
 
 #include "ChargerManager.h"
+#include "GrabberController.h"
 #include "Vision.h"
 
 // For the using of unorder_map on cv::Point
@@ -76,6 +78,7 @@ private:
 
     
     ChargerManager chargerManager;
+    GrabberController grabberController;
 
     /********************************* Data Fields *****************************/
     State curState;
@@ -87,6 +90,7 @@ private:
     std::unordered_map<cv::Point, Device, MyHash> unchargeable;
     
     std::set<cv::Point> toSchedule;
+    std::queue<std::pair<cv::Point, cv::Point> > movingCommands;
 
     cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT];
 
