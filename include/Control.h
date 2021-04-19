@@ -18,12 +18,17 @@ bool operator==(cv::Point const& a, cv::Point const& b){
     return (a.x == b.x) && (a.y == b.y);
 }
 
+bool operator!=(cv::Point const& a, cv::Point const& b){
+    return (a.x != b.x) && (a.y != b.y);
+}
+
 bool operator<(cv::Point const& a, cv::Point const& b){
     if (a.x == b.x) return a.y < b.y;
     else return a.x < b.x;
 }
 
 class MyHash{
+public:
     size_t operator()(cv::Point const& a) const {
         return a.x * 500 + a.y; // random choice
     }
@@ -42,7 +47,6 @@ struct Device{
     bool chargable;
 };
 
-typedef int (*ScheduleFunction)(void);
 
 class Control {
 
@@ -54,6 +58,8 @@ public:
     enum State{
         WAITING, CALCULATING, MOVING1, MOVING2, ERROR, NUM_STATES
     };
+
+    typedef int (Control::*ScheduleFunction)(void);
 
     /**
      * Launch the all the controls
@@ -96,7 +102,8 @@ private:
 
     // For Wireless Charging Subsystem
     int idleCoilCount;
-    ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT];
+    ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT]
+         = {ChargerManager::NOT_CHARGING};
 
 
 };

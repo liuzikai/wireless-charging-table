@@ -5,7 +5,8 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include <pthread.h>
+// #include <pthread.h>
+#include <assert.h>
 
 #include <JetsonGPIO.h>
 #include <set>
@@ -23,8 +24,6 @@
 using namespace std;
 
 
-static pthread_t pin_thread[ChargerManager::CHARGER_COUNT];
-
 // TODO: Get from vision
 static volatile bool visionNeedsHandling;
 static volatile vector<cv::Point> newDevices;
@@ -38,21 +37,21 @@ static const vector<cv::Point> initialPositions;
 
 /********************************* Public Functions *****************************/
 
-Control::Control(){
+Control::Control() : chargerManager(), grabberController() {
     
     curState = WAITING;
 
     // Fill the schedule functions table
-    schedule[0] = &scheduleWaiting;
-    schedule[1] = &scheduleCalculating;
-    schedule[2] = &scheduleMoving1;
-    schedule[3] = &scheduleMoving2;
-    schedule[4] = &scheduleError;
+    schedule[0] = &Control::scheduleWaiting;
+    schedule[1] = &Control::scheduleCalculating;
+    schedule[2] = &Control::scheduleMoving1;
+    schedule[3] = &Control::scheduleMoving2;
+    schedule[4] = &Control::scheduleError;
 
-    // Init the coil positions
-    curCoilPositions[0] = cv::Point(0,0);
-    curCoilPositions[1] = cv::Point(0,0);
-    curCoilPositions[2] = cv::Point(0,0);
+    // Init the coil positions TODO: set default value at .h
+    // curCoilPositions[0] = cv::Point(0,0);
+    // curCoilPositions[1] = cv::Point(0,0);
+    // curCoilPositions[2] = cv::Point(0,0);
     idleCoilCount = ChargerManager::CHARGER_COUNT;
 
 
@@ -60,14 +59,6 @@ Control::Control(){
 
 int Control::launch(){
     
-    // Launch the thread for pin status checking
-    for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
-        if (0 != pthread_create(&pin_thread[i], NULL, GPIO_read_inputs, &i)){
-            curState = ERROR;
-            errorMessage = "Pin status thread creation failure";
-        }
-    }
-
     while(1){
         schedule[curState]();
         sleep(1); // Sleep for 1s
@@ -79,7 +70,7 @@ int Control::launch(){
 
 /********************************* Schduling Controls *****************************/
 
-int scheduleWaiting(){
+int Control::scheduleWaiting(){
     
     bool needMoving = false;
     set<cv::Point> toIgnore; // filled when new status is CHARGING
@@ -111,11 +102,11 @@ int scheduleWaiting(){
                     idleCoilCount--;
                     
                     // The new device position at this coil should be ignored later
-                    if (chargeable.find(curCoilPositions[i]) != chargable.end()){
+                    if (chargeable.find(curCoilPositions[i]) != chargeable.end()){
                         ERROR_("Duplicate Device!");
                     }
                     toIgnore.insert(curCoilPositions[i]);
-                    chargeable[curCoilPositions[i]] = Device(curCoilPositions[i]);
+                    chargeable.insert(make_pair(curCoilPositions[i], Device(curCoilPositions[i])));
 
                     break;
 
@@ -144,7 +135,7 @@ int scheduleWaiting(){
                 continue;
             }
 
-            toSechdule.insert(newDevice);
+            toSchedule.insert(newDevice);
 
         }
 
@@ -174,6 +165,8 @@ int scheduleWaiting(){
         }
 
         visionNeedsHandling = false;
+        newDevices.clear();
+        removedDevices.clear();
 
     }
 
@@ -187,7 +180,7 @@ int scheduleWaiting(){
         
         if (curDevice != chargeable.end()){
             unchargeable.emplace(curDevice);
-            chargeable.erase(curDevice.first);
+            chargeable.erase(curDevice->first);
         } else {
             ERROR_("Conflict message from wireless and vision!");
         }
@@ -201,8 +194,8 @@ int scheduleWaiting(){
     return 0;
 }
 
-int scheduleCalculating(){
-    if (toSchedule.size() > 0 && idelCoilCount == 0) {
+int Control::scheduleCalculating(){
+    if (toSchedule.size() > 0 && idleCoilCount == 0) {
         curState = WAITING;
         return 0;
     }
@@ -210,7 +203,7 @@ int scheduleCalculating(){
     // Schedule the charging of devices if there are any
     // Collect ChargerManager::CHARGER_COUNT devices and reschedule all of them
     set<cv::Point> curSchedule;
-    int availableCoils = idelCoilCount;
+    int availableCoils = idleCoilCount;
     while(toSchedule.size() > 0 && availableCoils > 0){
         auto curDevice = *toSchedule.begin();
         curSchedule.insert(curDevice);
@@ -219,6 +212,7 @@ int scheduleCalculating(){
     }
 
     // New device to schedule
+    unordered_map<int, cv::Point> coilTarget;
     if (curSchedule.size() > 0){
         // Collect currently charging devices into the scheduling
         for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
@@ -229,7 +223,6 @@ int scheduleCalculating(){
 
         // Assign the coils according to the device location
         // Method: [assign the coil to the device] that have the cloest distance its initial position
-        unordered_map<int, cv::Point> coilTarget;
         for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
             
             // Didn't use map here since the distance may be the same for different devices
@@ -249,7 +242,7 @@ int scheduleCalculating(){
             // Add the device with the smallest distance to be the target
             cv::Point curTarget = distance[0].second;
             curSchedule.erase(curTarget);
-            if (curTarget != curCoilPositions[i]) coilTarget[i] = curTarget;
+            if (curTarget != curCoilPositions[i]) coilTarget.insert(make_pair(i, curTarget));
             
         }
         
@@ -261,8 +254,10 @@ int scheduleCalculating(){
 
     // Move the coils to corner if there are idle ones
     for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
-        if (oldStatus[i] == ChargerManager::NOT_CHARGING && coilTarget.find(i) == coilTarget.end()){
-            movingCommands.push_back(curCoilPositions[i], initialPositions[i]);
+        if (oldStatus[i] == ChargerManager::NOT_CHARGING && 
+            coilTarget.find(i) == coilTarget.end() &&
+            curCoilPositions[i] != initialPositions[i]){
+            movingCommands.push(make_pair(curCoilPositions[i], initialPositions[i]));
         }
     }
 
@@ -273,10 +268,11 @@ int scheduleCalculating(){
     return 0;
 }
 
-int scheduleMoving1(){
+int Control::scheduleMoving1(){
     // Send the moving commands
     while(!movingCommands.empty()){
-        auto c = movingCommands.pop_front();
+        auto c = movingCommands.front();
+        movingCommands.pop();
         grabberController.issueGrabberMovement(c.first.x, c.first.y, c.second.x, c.second.y);
     }
     
@@ -286,12 +282,12 @@ int scheduleMoving1(){
     return 0;
 }
 
-int scheduleMoving2(){
+int Control::scheduleMoving2(){
     return 0;
 }
 
-int scheduleError(){
-    printf("Error: %s\n", error_message.c_str());
+int Control::scheduleError(){
+    printf("Error: %s\n", errorMessage.c_str());
     return 0;
 }
 
