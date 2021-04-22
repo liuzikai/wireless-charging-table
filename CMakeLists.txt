@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Qi_Table)
+project(Qi-Table)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -7,8 +7,8 @@ set(CMAKE_CXX_STANDARD 14)
 find_package(OpenCV 4 REQUIRED)
 message("Found OpenCV")
 message("    Version: " ${OpenCV_VERSION})
-message("    Libraries: " ${OpenCV_LIBRARIES})
-message("    Includes: " ${OpenCV_INCLUDE_DIRS})
+message(VERBOSE "    Libraries: " ${OpenCV_LIBRARIES})
+message(VERBOSE "    Includes: " ${OpenCV_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 # Find boost
@@ -25,7 +25,7 @@ add_executable(QiTable
         src/Vision.cpp
         src/Camera.cpp
         src/DeviceManager.cpp
-        src/GPIOManager.cpp
+        src/ChargerManager.cpp
         src/main.cpp)
 
 add_executable(VisionUnitTest
@@ -37,6 +37,11 @@ add_executable(GrabberUnitTest
         src/GrabberController.cpp
         tests/GrabberUnitTest.cpp)
 
-target_link_libraries(QiTable ${OpenCV_LIBS})
+add_executable(ChargerManagerUnitTest
+        src/ChargerManager.cpp
+        tests/ChargerManagerUnitTest.cpp)
+
+target_link_libraries(QiTable ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} JetsonGPIO pthread)
 target_link_libraries(VisionUnitTest ${OpenCV_LIBS} pthread)
-target_link_libraries(GrabberUnitTest ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY})
+target_link_libraries(GrabberUnitTest ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} pthread)
+target_link_libraries(ChargerManagerUnitTest JetsonGPIO pthread)

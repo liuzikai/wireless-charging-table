@@ -32,23 +32,19 @@ private:
 
     void issueMoveCommand(unsigned speed, float x = -1, float y = -1, float z = -1);
 
-    void issueDwellCommand(int ms);
-
     boost::asio::io_context ioContext;
     boost::asio::serial_port serial;
 
     void serialSendCommand(const string &s);
 
-    static constexpr unsigned FLOAT_PRECISION = 2;
+    static constexpr unsigned FLOAT_PRECISION = 1;
 
     // TODO: calibrate on the mechanical structure
     static constexpr float Z_DETACHED = 0;
     static constexpr float Z_ATTACHED = 50;
 
-    static constexpr unsigned DWELL_TIME_MS = 500;
-
-    static constexpr unsigned MOVE_SPEED_DETACHED = 6000;  // [mm/min]
-    static constexpr unsigned MOVE_SPEED_ATTACHED = 3000;  // [mm/min]
+    static constexpr unsigned MOVE_SPEED_DETACHED = 18000;  // [mm/min]
+    static constexpr unsigned MOVE_SPEED_ATTACHED = 18000;  // [mm/min]
 };
 
 

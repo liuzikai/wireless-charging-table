@@ -9,6 +9,9 @@ GrabberController::GrabberController(const string &serialDevice, unsigned baudRa
         : serial(ioContext, serialDevice) {
 
     serial.set_option(boost::asio::serial_port::baud_rate(baudRate));
+    serial.set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::none));
+    serial.set_option(boost::asio::serial_port_base::character_size(8));
+    serial.set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
 
     serialSendCommand("G90");  // set absolute positioning
 }
@@ -17,14 +20,8 @@ void GrabberController::issueGrabberMovement(float srcX, float srcY, float destX
     // Step 1: attach the grabber from src
     issueMoveCommand(MOVE_SPEED_DETACHED, srcX, srcY, Z_ATTACHED);
 
-    // Pause for a while for the grabber to attach
-    issueDwellCommand(DWELL_TIME_MS);
-
     // Step 2: move the coil
     issueMoveCommand(MOVE_SPEED_ATTACHED, destX, destY);
-
-    // Pause for a while
-    issueDwellCommand(DWELL_TIME_MS);
 
     // Step 3: release the coil
     issueMoveCommand(MOVE_SPEED_DETACHED, -1, -1, Z_DETACHED);
@@ -44,12 +41,19 @@ void GrabberController::issueMoveCommand(unsigned speed, float x, float y, float
     serialSendCommand(ss.str());
 }
 
-void GrabberController::issueDwellCommand(int ms) {
-    serialSendCommand("G4 P" + std::to_string(ms));
-}
-
 void GrabberController::serialSendCommand(const string &s) {
     boost::asio::write(serial, boost::asio::buffer(s.c_str(), s.size()));
-    // TODO: confirm the delimiter of commands
-    boost::asio::write(serial, boost::asio::buffer("\n"));
+    boost::asio::write(serial, boost::asio::buffer("\n", 1));
+
+    /*boost::asio::streambuf buf;
+    boost::system::error_code ec;
+    auto readLen = boost::asio::read_until(serial, buf, '\n', ec);
+    if (ec) {
+        std::cerr << "\"" << s << "\" -> fails to read back" << std::endl;
+    } else {
+        std::string info{buffers_begin(buf.data()), buffers_begin(buf.data()) + readLen - 1};
+        if (info != "ok") {
+            std::cerr << "\"" << s << "\" ->  \"" << info << "\"" << std::endl;
+        }
+    }*/
 }
