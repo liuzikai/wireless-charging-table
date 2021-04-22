@@ -22,8 +22,8 @@ struct Range {
 };
 
 struct SharedParameters {
-    int imageWidth = 500;
-    int imageHeight = 500;
+    int imageWidth = 1280;
+    int imageHeight = 720;
 };
 
 
