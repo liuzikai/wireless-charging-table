@@ -126,8 +126,8 @@ int main(int argc, char **argv) {
 
 #if !CAMERA
     // read from the cmd arg
-    if( argc != 8) {
-        cout <<" Usage: ./VisionUnitTest image_to_process min_contour_area max_contour_area extend black_value_pick_up white_value_pick_up gamma_val_darker" << endl;
+    if( argc != 9) {
+        cout <<" Usage: ./VisionUnitTest image_to_process min_contour_area max_contour_area extend black_value_pick_up white_value_pick_up gamma_val_darker gamma_val_brighter" << endl;
         return -1;
     }
     Mat frame=imread(argv[1]); 
@@ -143,6 +143,7 @@ int main(int argc, char **argv) {
     my_vision.black_value_pick_up_=atoi(argv[5]);
     my_vision.white_value_pick_up_=atoi(argv[6]);
     my_vision.gamma_val_darker_=atof(argv[7]);
+    my_vision.gamma_val_brighter_=atof(argv[8]);
     // cout<<"checking value "<<min_contour_area<<" "<<max_contour_area<<" "<<extend_threshold<<" "<<black_value_pick_up<<" "<<gamma_val_darker<<endl;
     
     
@@ -164,6 +165,7 @@ vector<Point> Vision::processing(Mat &frame) {
     Mat image_BrightnessThreshold_black_obj;
     Mat image_BrightnessThreshold_white_obj;
     Mat gamma_corrected_darker=frame.clone();
+    Mat gamma_corrected_brighter=frame.clone();
     Mat drawing = Mat::zeros(frame.size(), CV_8UC3);
     // --------------- Gray the image and smooth it --------------
     // convert original image to gray image and apply smoothing
@@ -180,8 +182,9 @@ vector<Point> Vision::processing(Mat &frame) {
     // it will convert the image to darker 
     gammaCorrection(gray_image_blur, gamma_corrected_darker,gamma_val_darker_);
     imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
-    // Mat gamma_corrected_darker=gray_image_blur.clone();
-    // gammaCorrection(gray_image_blur, gamma_corrected_darker,gamma_val_darker_);
+
+    gammaCorrection(gray_image_blur, gamma_corrected_brighter,gamma_val_brighter_);
+    imwrite("test_gamma_correction_whiter.jpg", gamma_corrected_brighter);
 
     // image thresholding, there are effective 5 type of thresholding, 
     // we use the binary thresholding
@@ -200,7 +203,7 @@ vector<Point> Vision::processing(Mat &frame) {
     waitKey(5);
 #endif
     // bigger threshold means the pixel need to be bright enough to be set to light
-    threshold(gamma_corrected_darker, image_BrightnessThreshold_white_obj, white_value_pick_up_, 255, THRESH_BINARY);
+    threshold(gamma_corrected_brighter, image_BrightnessThreshold_white_obj, white_value_pick_up_, 255, THRESH_BINARY);
     imwrite("test_threshold_white_obj.jpg", image_BrightnessThreshold_white_obj);
     vector<RotatedRect> BoundingBox_white = this->findBoundingBox(image_BrightnessThreshold_white_obj, drawing);
     // now draw the rectangle on the mat
@@ -251,13 +254,13 @@ vector<Point> Vision::processing(Mat &frame) {
 // (577.053, 79.5175)    244.472 x 592.656    -53.4007°
 void Vision::gammaCorrection(const Mat &img, Mat& gamma_corrected,const double gamma_)
 {
-    CV_Assert(gamma_val_darker_ >= 0);
+    CV_Assert(gamma_ >= 0);
     // Mat img_gamma_corrected = Mat(img.rows, img.cols, img.type());
     //! [changing-contrast-brightness-gamma-correction]
     Mat lookUpTable(1, 256, CV_8U);
     uchar* p = lookUpTable.ptr();
     for( int i = 0; i < 256; ++i){
-        p[i] = saturate_cast<uchar>(pow(i / 255.0, gamma_val_darker_) * 255.0);
+        p[i] = saturate_cast<uchar>(pow(i / 255.0, gamma_) * 255.0);
     }
     LUT(img, lookUpTable, gamma_corrected);
     //! [changing-contrast-brightness-gamma-correction]
