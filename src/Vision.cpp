@@ -163,21 +163,23 @@ vector<Point> Vision::processing(Mat &frame) {
     Mat gray_image_blur;
     Mat image_BrightnessThreshold_black_obj;
     Mat image_BrightnessThreshold_white_obj;
+    Mat gamma_corrected_darker=frame.clone();
     Mat drawing = Mat::zeros(frame.size(), CV_8UC3);
-    // -------- Gray the image and smooth it -------
+    // --------------- Gray the image and smooth it --------------
     // convert original image to gray image and apply smoothing
     cvtColor(frame, gray_image, COLOR_BGR2GRAY);
-    // kernel size is 9 by 9
     imwrite("test_gray.jpg",gray_image);
+    // kernel size is 9 by 9
     blur(gray_image, gray_image_blur, Size(blur_kernel_size_, blur_kernel_size_));
     imwrite("test_gray_smooth.jpg",gray_image_blur);
 #if SHOW_GRAY_IMAGE
     imshow("gray", gray_image);
     waitKey(5);
 #endif
-
-    Mat gamma_corrected_darker=gray_image_blur.clone();
+    // --------------- Gamma correct ---------------
+    // it will convert the image to darker 
     gammaCorrection(gray_image_blur, gamma_corrected_darker,gamma_val_darker_);
+    imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
     // Mat gamma_corrected_darker=gray_image_blur.clone();
     // gammaCorrection(gray_image_blur, gamma_corrected_darker,gamma_val_darker_);
 
@@ -257,12 +259,10 @@ void Vision::gammaCorrection(const Mat &img, Mat& gamma_corrected,const double g
     for( int i = 0; i < 256; ++i){
         p[i] = saturate_cast<uchar>(pow(i / 255.0, gamma_val_darker_) * 255.0);
     }
-    
     LUT(img, lookUpTable, gamma_corrected);
     //! [changing-contrast-brightness-gamma-correction]
-
     // hconcat(img, res, img_gamma_corrected);
-    imwrite("Gamma_correction.jpg", gamma_corrected);
+    
 }
 
 vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold, Mat &drawing) {
