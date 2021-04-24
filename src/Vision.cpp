@@ -126,8 +126,8 @@ int main(int argc, char **argv) {
 
 #if !CAMERA
     // read from the cmd arg
-    if( argc != 9) {
-        cout <<" Usage: ./VisionUnitTest image_to_process min_contour_area max_contour_area extend black_value_pick_up white_value_pick_up gamma_val_darker gamma_val_brighter" << endl;
+    if( argc != 15) {
+        cout <<" Usage: ./VisionUnitTest image_to_process min_contour_area max_contour_area extend black_value_pick_up white_value_pick_up gamma_val_darker gamma_val_brighter high_H_ low_H_ high_S_ low_S_ high_V_ low_V_ " << endl;
         return -1;
     }
     Mat frame=imread(argv[1]); 
@@ -143,15 +143,19 @@ int main(int argc, char **argv) {
     my_vision.black_value_pick_up_=atoi(argv[5]);
     my_vision.white_value_pick_up_=atoi(argv[6]);
     my_vision.gamma_val_darker_=atof(argv[7]);
-    my_vision.gamma_val_brighter_=atof(argv[8]);
+    my_vision.gamma_val_hsv_=atof(argv[8]);
     // cout<<"checking value "<<min_contour_area<<" "<<max_contour_area<<" "<<extend_threshold<<" "<<black_value_pick_up<<" "<<gamma_val_darker<<endl;
-    
+    my_vision.high_H_ = atof(argv[9]);
+    my_vision.low_H_ = atof(argv[10]);
+    my_vision.high_S_ = atof(argv[11]);
+    my_vision.low_S_ = atof(argv[12]);
+    my_vision.high_V_ = atof(argv[13]);
+    my_vision.low_V_ = atof(argv[14]);
+
     
     my_vision.processing(frame);
 #endif
     // close the file
-
-
     // the camera will be deinitialized automatically in VideoCapture destructor
     return 0;
 }
@@ -160,15 +164,19 @@ vector<Point> Vision::processing(Mat &frame) {
     // good source of image processing 
     // https://docs.opencv.org/3.4/d2/d96/tutorial_py_table_of_contents_imgproc.html
 //    imwrite("test.jpg", frame);
+    Mat frame_HSV;
+    Mat image_threshold_hsv;
+    Mat image_threshold_hsv_blur;
     Mat gray_image;
     Mat gray_image_blur;
     Mat image_BrightnessThreshold_black_obj;
     Mat image_BrightnessThreshold_white_obj;
     Mat gamma_corrected_darker=frame.clone();
-    Mat gamma_corrected_brighter=frame.clone();
+    Mat gamma_corrected_hsv=frame.clone();
     Mat drawing = Mat::zeros(frame.size(), CV_8UC3);
     // --------------- Gray the image and smooth it --------------
     // convert original image to gray image and apply smoothing
+    
     cvtColor(frame, gray_image, COLOR_BGR2GRAY);
     imwrite("test_gray.jpg",gray_image);
     // kernel size is 9 by 9
@@ -178,13 +186,23 @@ vector<Point> Vision::processing(Mat &frame) {
     imshow("gray", gray_image);
     waitKey(5);
 #endif
-    // --------------- Gamma correct ---------------
+    // --------------- Gamma correction ---------------
     // it will convert the image to darker 
     gammaCorrection(gray_image_blur, gamma_corrected_darker,gamma_val_darker_);
     imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
 
-    gammaCorrection(gray_image_blur, gamma_corrected_brighter,gamma_val_brighter_);
-    imwrite("test_gamma_correction_whiter.jpg", gamma_corrected_brighter);
+    gammaCorrection(frame, gamma_corrected_hsv,gamma_val_hsv_);
+    imwrite("test_gamma_correction_whiter.jpg", gamma_corrected_hsv);
+    // --------------- Try image segmentation using HSV color space --------------- 
+    // cout<<high_H_<<endl;
+    cvtColor(gamma_corrected_hsv, frame_HSV, COLOR_BGR2HSV);
+    inRange(frame_HSV, Scalar(low_H_, low_S_, low_V_), Scalar(high_H_, high_S_, high_V_), image_threshold_hsv);
+    imwrite("test_hsv_img.jpg",frame_HSV);
+    // blur(image_threshold_hsv, image_threshold_hsv_blur, Size(15, 15));
+    imwrite("test_image_threshold_hsv.jpg",image_threshold_hsv);
+    // imwrite("test_image_threshold_hsv_blur.jpg",image_threshold_hsv_blur);
+
+
 
     // image thresholding, there are effective 5 type of thresholding, 
     // we use the binary thresholding
@@ -203,7 +221,7 @@ vector<Point> Vision::processing(Mat &frame) {
     waitKey(5);
 #endif
     // bigger threshold means the pixel need to be bright enough to be set to light
-    threshold(gamma_corrected_brighter, image_BrightnessThreshold_white_obj, white_value_pick_up_, 255, THRESH_BINARY);
+    threshold(image_threshold_hsv, image_BrightnessThreshold_white_obj, white_value_pick_up_, 255, THRESH_BINARY);
     imwrite("test_threshold_white_obj.jpg", image_BrightnessThreshold_white_obj);
     vector<RotatedRect> BoundingBox_white = this->findBoundingBox(image_BrightnessThreshold_white_obj, drawing);
     // now draw the rectangle on the mat
