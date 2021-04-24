@@ -30,9 +30,12 @@ add_executable(QiTable
 
 add_executable(VisionUnitTest
         src/DeviceManager.cpp
-        src/ParameterTuning.cpp
         src/Camera.cpp
-        src/Vision.cpp)
+        src/Vision.cpp
+        tests/VisionUnitTest.cpp)
+
+add_executable(ParameterTuningTest
+        tests/ParameterTuning.cpp)
 
 add_executable(GrabberUnitTest
         src/GrabberController.cpp
@@ -44,5 +47,6 @@ add_executable(ChargerManagerUnitTest
 
 target_link_libraries(QiTable ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} JetsonGPIO pthread)
 target_link_libraries(VisionUnitTest ${OpenCV_LIBS} pthread)
+target_link_libraries(ParameterTuningTest ${OpenCV_LIBS} pthread)
 target_link_libraries(GrabberUnitTest ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} pthread)
 target_link_libraries(ChargerManagerUnitTest JetsonGPIO pthread)

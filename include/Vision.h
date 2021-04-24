@@ -28,7 +28,7 @@ public:
     void drawRotatedRect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &boarderColor);
     std::vector <cv::RotatedRect> findBoundingBox(const cv::Mat &image_BrightnessThreshold, cv::Mat &drawing);
     void gammaCorrection(const cv::Mat &img, cv::Mat & gamma_corrected, const double gamma_);
-    // void 
+    void draw_contour_bounding_box(std::vector<cv::RotatedRect>& BoundingBox, cv::Mat& drawing, cv::Mat&frame );
 
 
 
