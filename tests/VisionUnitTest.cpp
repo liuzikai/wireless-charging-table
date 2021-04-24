@@ -1,6 +1,12 @@
 #include "Vision.h"
 using namespace std;
 using namespace cv;
+#define CAMERA 0
+
+bool visionNeedsHandling;
+vector<cv::Point> newDevices;
+vector<cv::Point> removedDevices;
+
 int main(int argc, char **argv) {
    // open the file for data transmission
 
