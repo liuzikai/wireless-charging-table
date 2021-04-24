@@ -45,9 +45,19 @@ public:
     // bigger threshold means the pixel need to be bright enough to be set to light (so to be detected)
     int white_value_pick_up_ = 180;
     float gamma_val_darker_ = 1.9;
-    float gamma_val_brighter_ = 0.5;
+    float gamma_val_hsv_ = 2.5;
     float aspectRatio_max_ =2.5;
     float aspectRatio_min_ =1.5;
+    // hue range is [0,179], saturation range is [0,255], and value range is [0,255]
+    // H between 0 to 360
+    float high_H_ = 45;
+    float low_H_ = 17;
+    // S between 0 to 1
+    float high_S_ = 160;
+    float low_S_ = 20;
+    // V between 0 to 1
+    float high_V_ = 150;
+    float low_V_ = 40;
 };
 
 #endif //ECE445_TEAM24_VISION_H
