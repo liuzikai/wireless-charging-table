@@ -3,34 +3,50 @@
 
 // Created by Tingkai Liu 2021-03-29
 
-#define NUM_COILS   3
-#define BAUD        19200 // For the serial port /dev/ttyTHS1 (board pin 8&10) or COM (USB)
-
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <string>
+#include <set>
+#include <queue>
 
-// The pin numbers for coil status input in BCM mode (see the datasheet)
-static const int coil_pins[NUM_COILS] = {9, 10, 11};
+#include "ChargerManager.h"
+#include "GrabberController.h"
+#include "Vision.h"
 
-struct Coordinate{
-    Coordinate(int x, int y) : x(x), y(y) {}
-    
-    int x;
-    int y;
+// For the using of unorder_map on cv::Point
+bool operator==(cv::Point const& a, cv::Point const& b){
+    return (a.x == b.x) && (a.y == b.y);
+}
+
+bool operator!=(cv::Point const& a, cv::Point const& b){
+    return (a.x != b.x) && (a.y != b.y);
+}
+
+bool operator<(cv::Point const& a, cv::Point const& b){
+    if (a.x == b.x) return a.y < b.y;
+    else return a.x < b.x;
+}
+
+class MyHash{
+public:
+    size_t operator()(cv::Point const& a) const {
+        return a.x * 500 + a.y; // random choice
+    }
 };
 
 struct Device{
-    Coordinate coor;
+    Device(cv::Point coor) : coor(coor) {}
+    
+    
+    cv::Point coor;
 
     // The x, y dimention length of the device
-    int x_length;
-    int y_length;
+    // int x_length;
+    // int y_length;
 
     bool chargable;
 };
 
-typedef int (*schedule_function)(void);
 
 class Control {
 
@@ -43,9 +59,7 @@ public:
         WAITING, CALCULATING, MOVING1, MOVING2, ERROR, NUM_STATES
     };
 
-    enum Pin_status{
-        IDLE, CHARGING, BLINK, NUM_STATUS  
-    };
+    typedef int (Control::*ScheduleFunction)(void);
 
     /**
      * Launch the all the controls
@@ -56,59 +70,43 @@ public:
 
 private:
     /********************************* Schduling Controls *****************************/
-    schedule_function schedule[NUM_STATES];
+    ScheduleFunction schedule[NUM_STATES];
 
     /**
      * The scheduling functions for each states
      * See the document for the work of each state
      */
-    int schedule_waiting();
-    int schedule_calculating();
-    int schedule_moving1();
-    int schedule_moving2();
-    int schedule_error();
+    int scheduleWaiting();
+    int scheduleCalculating();
+    int scheduleMoving1();
+    int scheduleMoving2();
+    int scheduleError();
+
     
-    /********************************* GPIO Controls *****************************/
-    
-    /**
-     * Initialize the GPIO pins for collecting wireless charging coil information
-     */
-    int GPIO_init();
-
-    /**
-     * Collect the inputs from all the coils
-     * Pin status: 0 means LOW. 1 means HIGH.
-     * 1Hz of blink means unchargable device is placed
-     * @param   pin_index The index of the pin number (BCM Mode) to check in the pin number array
-     * @return  Output as a share variable
-     */
-    void GPIO_read_inputs(int pin_index);
-
-
-    /********************************* Mechanical Controls *****************************/
-    int move_x();
-    int move_y();
-
+    ChargerManager chargerManager;
+    GrabberController grabberController;
 
     /********************************* Data Fields *****************************/
-    State cur_state;
+    State curState;
     
-    std::string error_message;
+    std::string errorMessage;
 
     // Device status
-    std::map<Coordinate, Device> chargeable;
-    std::map<Coordinate, Device> unchargeable;
+    std::unordered_map<cv::Point, Device, MyHash> chargeable;
+    std::unordered_map<cv::Point, Device, MyHash> unchargeable;
+    
+    std::set<cv::Point> toSchedule;
 
-    Coordinate cur_coil_positions[NUM_COILS];
+    std::set<cv::Point> schedulingNew; // The new devices in scheduling
+    std::set<cv::Point> schedulingOld; // The old devices rescheduling (coil change)
+    std::queue<std::pair<int, cv::Point> > movingCommands; // (coil index, target)
+
+    cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT];
 
     // For Wireless Charging Subsystem
-    int idle_coil_count;
-    Pin_status status[NUM_COILS];
-
-    // The signal that the pin status changed
-    // Always set high by pin thread and set low by control (main) thread
-    // So no need for lock
-    bool pin_needs_handling[NUM_COILS]; 
+    int idleCoilCount;
+    ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT]
+         = {ChargerManager::NOT_CHARGING};
 
 
 };
