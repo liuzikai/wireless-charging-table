@@ -45,8 +45,12 @@ add_executable(ChargerManagerUnitTest
         src/ChargerManager.cpp
         tests/ChargerManagerUnitTest.cpp)
 
+add_executable(GPIOUnitTest
+        tests/GPIOUnitTest.cpp)
+
 target_link_libraries(QiTable ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} JetsonGPIO pthread)
 target_link_libraries(VisionUnitTest ${OpenCV_LIBS} pthread)
 target_link_libraries(ParameterTuningTest ${OpenCV_LIBS} pthread)
 target_link_libraries(GrabberUnitTest ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} pthread)
 target_link_libraries(ChargerManagerUnitTest JetsonGPIO pthread)
+target_link_libraries(GPIOUnitTest JetsonGPIO pthread)

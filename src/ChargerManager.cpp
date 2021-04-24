@@ -13,7 +13,11 @@ constexpr int ChargerManager::GREEN_PINS[ChargerManager::CHARGER_COUNT];
 
 
 ChargerManager::ChargerManager() {
-    GPIO::setmode(GPIO::NumberingModes::BCM);
+    GPIO::setmode(GPIO::BCM);
+    for (int i = 0; i < CHARGER_COUNT; i++) {
+        GPIO::setup(RED_PINS[i], GPIO::IN);
+        GPIO::setup(GREEN_PINS[i], GPIO::IN);
+    }
     threadShouldExit = false;
     updateThread = std::thread(&ChargerManager::update, this);
 }
@@ -28,8 +32,9 @@ void ChargerManager::update() {
 
         for (int i = 0; i < CHARGER_COUNT; i++) {
 
-            int newRed = GPIO::input(RED_PINS[i]);
-            int newGreen = GPIO::input(GREEN_PINS[i]);
+            // Both red and green led status are negation of the voltage level
+            int newRed = !GPIO::input(RED_PINS[i]);
+            int newGreen = !GPIO::input(GREEN_PINS[i]);
 
 
             if (green[i] == 0 && newGreen == 1) {  // green 0 -> 1 indicates start charging

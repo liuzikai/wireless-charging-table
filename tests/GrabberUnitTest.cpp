@@ -5,7 +5,7 @@
 #include "GrabberController.h"
 
 // TODO: serial device name
-GrabberController grabber("/dev/ttyACM0", 115200);
+GrabberController grabber("/dev/ttyACM1", 115200);
 
 int main() {
 

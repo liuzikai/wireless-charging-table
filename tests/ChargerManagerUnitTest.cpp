@@ -5,14 +5,16 @@
 #include "ChargerManager.h"
 #include <iostream>
 
-ChargerManager chargerManager;
+std::unique_ptr<ChargerManager> chargerManager;
 
 int main() {
+
+    chargerManager = std::make_unique<ChargerManager>();
 
     while (true) {
         for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++) {
             std::cout << "i: ";
-            switch (chargerManager.getChargerStatus(i)) {
+            switch (chargerManager->getChargerStatus(i)) {
                 case ChargerManager::UNKNOWN:
                     std::cout << "UNKNOWN         ";
                     break;

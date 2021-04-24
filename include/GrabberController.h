@@ -40,8 +40,8 @@ private:
     static constexpr unsigned FLOAT_PRECISION = 1;
 
     // TODO: calibrate on the mechanical structure
-    static constexpr float Z_DETACHED = 0;
-    static constexpr float Z_ATTACHED = 50;
+    static constexpr float Z_DETACHED = 31;
+    static constexpr float Z_ATTACHED = 51;
 
     static constexpr unsigned MOVE_SPEED_DETACHED = 42000;  // [mm/min]
     static constexpr unsigned MOVE_SPEED_ATTACHED = 12000;  // [mm/min]
