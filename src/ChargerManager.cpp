@@ -10,7 +10,6 @@ constexpr unsigned ChargerManager::UPDATE_INTERVAL_MS;
 constexpr unsigned ChargerManager::CHARGER_COUNT;
 constexpr int ChargerManager::RED_PINS[ChargerManager::CHARGER_COUNT];
 constexpr int ChargerManager::GREEN_PINS[ChargerManager::CHARGER_COUNT];
-constexpr unsigned ChargerManager::UPDATE_INTERVAL_MS;
 
 
 ChargerManager::ChargerManager() {
