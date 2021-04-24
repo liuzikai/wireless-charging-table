@@ -170,9 +170,9 @@ int Control::scheduleWaiting(){
 
     }
 
-    if (toIgnore.size() != 0){
-        ERROR_("Conflict message from wireless and vision!");
-    }
+    // if (toIgnore.size() != 0){
+    //     ERROR_("Conflict message from wireless and vision!");
+    // }
 
     // Mark the remaining toConfirm devices as unchargeable (finished charging)
     for (const auto& confirm : toConfirm){
