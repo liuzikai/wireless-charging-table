@@ -33,6 +33,11 @@ using namespace std;
 #define SHOW_ANNOTED_IMAGE 1
 #define CAMERA 1
 
+// Communication with control
+volatile bool visionNeedsHandling;
+volatile vector<cv::Point> newDevices;
+volatile vector<cv::Point> removedDevices;
+
 SharedParameters sharedParams;
 Camera::ParameterSet cameraParams;
 

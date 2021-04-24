@@ -20,10 +20,6 @@
 #include <unistd.h>
 #include <sys/fcntl.h>
 
-volatile bool visionNeedsHandling;
-volatile vector<cv::Point> newDevices;
-volatile vector<cv::Point> removedDevices;
-
 class Vision {
 public:
     // member variable
