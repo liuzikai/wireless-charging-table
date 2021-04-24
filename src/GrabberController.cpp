@@ -13,7 +13,7 @@ GrabberController::GrabberController(const string &serialDevice, unsigned baudRa
     serial.set_option(boost::asio::serial_port_base::character_size(8));
     serial.set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
 
-    serialSendCommand("G90");  // set absolute positioning
+    serialSendCommand("G28 X Y");  // home
 }
 
 void GrabberController::issueGrabberMovement(float srcX, float srcY, float destX, float destY) {

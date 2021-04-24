@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Qi-Table)
+project(Qi_Table)
 
 set(CMAKE_CXX_STANDARD 14)
 

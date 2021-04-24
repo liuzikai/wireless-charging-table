@@ -43,8 +43,8 @@ private:
     static constexpr float Z_DETACHED = 0;
     static constexpr float Z_ATTACHED = 50;
 
-    static constexpr unsigned MOVE_SPEED_DETACHED = 18000;  // [mm/min]
-    static constexpr unsigned MOVE_SPEED_ATTACHED = 18000;  // [mm/min]
+    static constexpr unsigned MOVE_SPEED_DETACHED = 42000;  // [mm/min]
+    static constexpr unsigned MOVE_SPEED_ATTACHED = 12000;  // [mm/min]
 };
 
 
