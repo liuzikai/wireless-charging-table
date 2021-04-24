@@ -1,11 +1,17 @@
 #include "Vision.h"
+// #include "Common.h"
+// #include "Camera.h"
+// #include "DeviceManager.h"
 using namespace std;
 using namespace cv;
-#define CAMERA 0
+#define CAMERA 1
 
 bool visionNeedsHandling;
 vector<cv::Point> newDevices;
 vector<cv::Point> removedDevices;
+
+// SharedParameters sharedParams;
+// Camera::ParameterSet cameraParams;
 
 int main(int argc, char **argv) {
    // open the file for data transmission
@@ -58,36 +64,38 @@ int main(int argc, char **argv) {
 #endif
        // store the image
 //         Mat frame=my_camera.getFrame();
-       imwrite("test.jpg", frame);
+    //    imwrite("test.jpg", frame);
        // break;
        // call a function to process the image, passing by reference
 
-       vector<Point> image_locations;
-//        cout<<"before launch test"<<endl;
-       image_locations = my_vision.processing(frame);
-       // cout<<"detected positions"<<endl;
-       // for (auto &point: image_locations) {
-       //     cout << "(" << point.x << "," << point.y << ")" << endl;
-       // }
-       vector<cv::Point> inserted;
-       vector<cv::Point> deleted;
+        vector<Point> image_locations;
+    //        cout<<"before launch test"<<endl;
+        image_locations = my_vision.processing(frame);
+        // cout<<"detected positions"<<endl;
+        // for (auto &point: image_locations) {
+        //     cout << "(" << point.x << "," << point.y << ")" << endl;
+        // }
+        vector<cv::Point> inserted;
+        vector<cv::Point> deleted;
 
-       devices_manager_interface.updateLocationMapping(image_locations, inserted, deleted);
-       // cout<<"inserted positions"<<endl;
-       // for(auto& point:inserted){
+        devices_manager_interface.updateLocationMapping(image_locations, inserted, deleted);
+        cout<<"inserted positions"<<endl;
+        for(auto& point:inserted){
 
-       //     cout << "(" << point.x << "," << point.y << ")" << endl;
-       // }
-       // cout<<"removed positions"<<endl;
-       // for(auto& point:deleted){
+            cout << "(" << point.x << "," << point.y << ")" << endl;
+        }
+        cout<<"removed positions"<<endl;
+        for(auto& point:deleted){
 
-       //     cout << "(" << point.x << "," << point.y << ")" << endl;
-       // }
-       if (!visionNeedsHandling && (inserted.size() || deleted.size())){
-           newDevices = inserted;
-           removedDevices = deleted;
-           visionNeedsHandling = true;
-       }
+            cout << "(" << point.x << "," << point.y << ")" << endl;
+        }
+        vector<cv::Point> inserted_real=devices_manager_interface.getRealLocation(inserted,sharedParams.imageWidth,sharedParams.imageHeight);
+        vector<cv::Point> deleteed_real=devices_manager_interface.getRealLocation(deleted,sharedParams.imageWidth,sharedParams.imageHeight);
+        if (!visionNeedsHandling && (inserted.size() || deleted.size())){
+            newDevices = inserted;
+            removedDevices = deleted;
+            visionNeedsHandling = true;
+        }
 
    }
 #endif

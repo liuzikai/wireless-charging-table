@@ -1,8 +1,5 @@
 #include "Vision.h"
-#include "Camera.h"
-#include "Common.h"
-#include "DeviceManager.h"
-#include <iostream>
+
 
 #define GPU 0
 
@@ -38,7 +35,6 @@ using namespace std;
 
 SharedParameters sharedParams;
 Camera::ParameterSet cameraParams;
-
 // for random color
 RNG rng(12345);
 

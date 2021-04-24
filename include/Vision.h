@@ -20,6 +20,13 @@
 #include <unistd.h>
 #include <sys/fcntl.h>
 
+#include "Camera.h"
+#include "Common.h"
+#include "DeviceManager.h"
+
+extern SharedParameters sharedParams;
+extern Camera::ParameterSet cameraParams;
+
 class Vision {
 public:
     // member variable
