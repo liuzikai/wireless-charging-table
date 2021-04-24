@@ -205,7 +205,7 @@ int Control::scheduleCalculating(){
     }
 
     // New device to schedule
-    unordered_map<cv::Point, int, MyHash> coilTarget;
+    unordered_map<int, cv::Point> coilTarget;
     if (curSchedule.size() > 0){
         
         // Collect currently charging devices into the scheduling
@@ -237,22 +237,22 @@ int Control::scheduleCalculating(){
             // Add the device with the smallest distance to be the target
             cv::Point curTarget = distance[0].second;
             curSchedule.erase(curTarget);
-            if (curTarget != curCoilPositions[i]) coilTarget.insert(make_pair(curTarget, i));
+            if (curTarget != curCoilPositions[i]) coilTarget.insert(make_pair(i, curTarget));
             
         }
         
-        // Fill the moving queue TODO:
+        // Fill the moving queue TODO: also change the order of the coilTarget map
         // Order: to avoid coil conflict, the devices with no coil under it are scheduled first
         // Start with a new devices (garentee to have no coil under it)
         // for (const auto& newSche : schedulingNew){
         //     auto curTarget = coilTarget[newSche];
-        //     movingCommands.push_back(make_pair(curTarget.second, curTarget.first));
+        //     movingCommands.push(make_pair(curTarget.second, curTarget.first));
 
         // }
         
         
         for (const auto& target : coilTarget){
-            movingCommands.push_back(make_pair(target.first, target.second));
+            movingCommands.push(make_pair(target.first, target.second));
         }
     }
 
