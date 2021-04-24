@@ -101,7 +101,7 @@ private:
     std::set<cv::Point> schedulingOld; // The old devices rescheduling (coil change)
     std::queue<std::pair<int, cv::Point> > movingCommands; // (coil index, target)
 
-    cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT];
+    cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0,0)};
 
     // For Wireless Charging Subsystem
     int idleCoilCount;

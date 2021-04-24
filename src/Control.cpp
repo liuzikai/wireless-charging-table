@@ -60,7 +60,7 @@ Control::Control() : chargerManager(), grabberController() {
 int Control::launch(){
     
     while(1){
-        schedule[curState]();
+        (this->*(schedule[curState]))();
         sleep(1); // Sleep for 1s
     }
 
