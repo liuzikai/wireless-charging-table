@@ -205,7 +205,7 @@ int Control::scheduleCalculating(){
     }
 
     // New device to schedule
-    unordered_map<cv::Point, int> coilTarget;
+    unordered_map<cv::Point, int, MyHash> coilTarget;
     if (curSchedule.size() > 0){
         
         // Collect currently charging devices into the scheduling
