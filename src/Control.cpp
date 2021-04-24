@@ -24,20 +24,17 @@
 using namespace std;
 
 
-// TODO: Get from vision
-static volatile bool visionNeedsHandling;
-static volatile vector<cv::Point> newDevices;
-static volatile vector<cv::Point> removedDevices;
+extern volatile bool visionNeedsHandling;
+extern volatile vector<cv::Point> newDevices;
+extern volatile vector<cv::Point> removedDevices;
 
-// TODO: Move to charger manager
-static const vector<cv::Point> initialPositions;
 
 // static pthread_mutex_t pin_locks[ChargerManager::CHARGER_COUNT]; 
 
 
 /********************************* Public Functions *****************************/
 
-Control::Control() : chargerManager(), grabberController() {
+Control::Control() : chargerManager(), grabberController("/dev/ttyACM0", 115200) {
     
     curState = WAITING;
 
@@ -48,12 +45,7 @@ Control::Control() : chargerManager(), grabberController() {
     schedule[3] = &Control::scheduleMoving2;
     schedule[4] = &Control::scheduleError;
 
-    // Init the coil positions TODO: set default value at .h
-    // curCoilPositions[0] = cv::Point(0,0);
-    // curCoilPositions[1] = cv::Point(0,0);
-    // curCoilPositions[2] = cv::Point(0,0);
     idleCoilCount = ChargerManager::CHARGER_COUNT;
-
 
 }
 
