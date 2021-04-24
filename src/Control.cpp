@@ -65,8 +65,8 @@ int Control::launch(){
 int Control::scheduleWaiting(){
     
     bool needMoving = false;
-    set<cv::Point> toIgnore; // filled when new status is CHARGING
-    set<cv::Point> toConfirm; // filled when new status is NOT_CHARGING
+    set<cv::Point, PointLess> toIgnore; // filled when new status is CHARGING
+    set<cv::Point, PointLess> toConfirm; // filled when new status is NOT_CHARGING
 
     // Pull for the wireless charging status
     for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
@@ -194,7 +194,7 @@ int Control::scheduleCalculating(){
     
     // Schedule the charging of devices if there are any
     // Collect ChargerManager::CHARGER_COUNT devices and reschedule all of them
-    set<cv::Point> curSchedule;
+    set<cv::Point, PointLess> curSchedule;
     int availableCoils = idleCoilCount;
     while(toSchedule.size() > 0 && availableCoils > 0){
         auto curDevice = *toSchedule.begin();

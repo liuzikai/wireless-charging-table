@@ -22,10 +22,13 @@ bool operator!=(cv::Point const& a, cv::Point const& b){
     return (a.x != b.x) && (a.y != b.y);
 }
 
-bool operator<(cv::Point const& a, cv::Point const& b){
-    if (a.x == b.x) return a.y < b.y;
-    else return a.x < b.x;
-}
+struct PointLess {
+    bool operator()(cv::Point const& a, cv::Point const& b){
+        if (a.x == b.x) return a.y < b.y;
+        else return a.x < b.x;
+    }
+};
+
 
 class MyHash{
 public:
@@ -95,10 +98,10 @@ private:
     std::unordered_map<cv::Point, Device, MyHash> chargeable;
     std::unordered_map<cv::Point, Device, MyHash> unchargeable;
     
-    std::set<cv::Point> toSchedule;
+    std::set<cv::Point, PointLess> toSchedule;
 
-    std::set<cv::Point> schedulingNew; // The new devices in scheduling
-    std::set<cv::Point> schedulingOld; // The old devices rescheduling (coil change)
+    std::set<cv::Point, PointLess> schedulingNew; // The new devices in scheduling
+    std::set<cv::Point, PointLess> schedulingOld; // The old devices rescheduling (coil change)
     std::queue<std::pair<int, cv::Point> > movingCommands; // (coil index, target)
 
     cv::Point initialPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0,0)};
