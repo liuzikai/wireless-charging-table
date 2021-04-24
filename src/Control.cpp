@@ -24,9 +24,9 @@
 using namespace std;
 
 
-extern volatile bool visionNeedsHandling;
-extern volatile vector<cv::Point> newDevices;
-extern volatile vector<cv::Point> removedDevices;
+extern bool visionNeedsHandling;
+extern vector<cv::Point> newDevices;
+extern vector<cv::Point> removedDevices;
 
 
 // static pthread_mutex_t pin_locks[ChargerManager::CHARGER_COUNT]; 
