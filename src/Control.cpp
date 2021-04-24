@@ -171,7 +171,7 @@ int Control::scheduleWaiting(){
         auto curDevice = chargeable.find(confirm);
         
         if (curDevice != chargeable.end()){
-            unchargeable.emplace(curDevice);
+            unchargeable.emplace(*curDevice);
             chargeable.erase(curDevice->first);
         } else {
             ERROR_("Conflict message from wireless and vision!");
