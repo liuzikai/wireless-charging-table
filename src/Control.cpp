@@ -282,7 +282,7 @@ int Control::scheduleMoving1(){
         // Issue the command
         auto c = movingCommands.front();
         movingCommands.pop();
-        auto& coil = curCoilPositions[c.first]
+        auto& coil = curCoilPositions[c.first];
         grabberController.issueGrabberMovement(coil.x, coil.y, c.second.x, c.second.y);
 
         // Wait until complete and check the final wireless charging status
