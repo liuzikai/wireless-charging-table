@@ -20,17 +20,23 @@
 #include <unistd.h>
 #include <sys/fcntl.h>
 
+#include "Camera.h"
+#include "Common.h"
+#include "DeviceManager.h"
+
+extern SharedParameters sharedParams;
+extern Camera::ParameterSet cameraParams;
+
 class Vision {
 public:
     // member variable
     // member function
     std::vector <cv::Point> processing(cv::Mat &frame);
     void drawRotatedRect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &boarderColor);
-    std::vector <cv::RotatedRect> findBoundingBox(const cv::Mat &image_BrightnessThreshold, cv::Mat &drawing);
+    std::vector <cv::RotatedRect> findBoundingBox(const cv::Mat &image_BrightnessThreshold, std::vector<std::vector<cv::Point>>& contours);
     void gammaCorrection(const cv::Mat &img, cv::Mat & gamma_corrected, const double gamma_);
-    // void 
-
-
+    void draw_bounding_box(std::vector<cv::RotatedRect>& BoundingBox, cv::Mat& drawing, cv::Mat& frame );
+    std::vector<std::vector<cv::Point>> find_draw_contours(const cv::Mat &image_BrightnessThreshold, cv::Mat& drawing);
 
     // member variable 
     int blur_kernel_size_ = 9;

@@ -1,8 +1,5 @@
 #include "Vision.h"
-#include "Camera.h"
-#include "Common.h"
-#include "DeviceManager.h"
-#include <iostream>
+
 
 #define GPU 0
 
@@ -31,16 +28,13 @@ using namespace std;
 #define SHOW_THRESHOLD_IMAGE 0
 #define SHOW_CONTOUR_IMAGE 0
 #define SHOW_ANNOTED_IMAGE 1
-#define CAMERA 1
+#define CAMERA 0
 
 // Communication with control TODO: volatile?
-bool visionNeedsHandling;
-vector<cv::Point> newDevices;
-vector<cv::Point> removedDevices;
+
 
 SharedParameters sharedParams;
 Camera::ParameterSet cameraParams;
-
 // for random color
 RNG rng(12345);
 
@@ -48,126 +42,6 @@ RNG rng(12345);
 // https://docs.opencv.org/master/d6/d55/tutorial_table_of_content_calib3d.html
 // https://docs.opencv.org/master/d4/d94/tutorial_camera_calibration.html
 
-int main(int argc, char **argv) {
-    // open the file for data transmission
-
-#if CAMERA
-//     Camera my_camera;
-//     my_camera.open(sharedParams, cameraParams);
-    //--- INITIALIZE VIDEOCAPTURE ------
-    VideoCapture cap;
-    // open the default camera using default API
-    // cap.open(0);
-    // OR advance usage: select any API backend
-    int deviceID = 0;             // 0 = open default camera
-    int apiID = cv::CAP_ANY;      // 0 = autodetect default API
-    // open selected camera using selected API
-    cap.open(deviceID, apiID);
-    // set the resolution of camera
-    cap.set(CAP_PROP_FRAME_WIDTH, sharedParams.imageWidth);
-    cap.set(CAP_PROP_FRAME_HEIGHT, sharedParams.imageHeight);
-    cout << "frame width is " << cap.get(CAP_PROP_FRAME_WIDTH) <<
-         " frame height is " << cap.get(CAP_PROP_FRAME_HEIGHT) << endl;
-    // check if we succeeded
-    if (!cap.isOpened()) {
-        cerr << "ERROR! Unable to open camera\n";
-        return -1;
-    }
-    //--- GRAB AND WRITE LOOP ----- 
-    cout << "Start streaming the video" << endl;
-    // !!!!!!! Declaration of this variable must be the outside of the for loop
-    // otherwise the location map will be overwrite every time
-//    cout<<"before entering for loop"<<endl;
-    DeviceManager devices_manager_interface;
-    Vision my_vision;
-    for (;;) {
-        Mat frame;
-        // wait for a new frame from camera and store it into 'frame'
-        cap.read(frame);  // or: cap >> frame;
-        // check if we succeeded
-        if (frame.empty()) {
-            cerr << "ERROR! blank frame grabbed\n";
-            break;
-        }
-
-#if SHOW_ORIG_IMAGE
-        // show live and wait for a key with timeout long enough to show images
-        imshow("Live", frame);
-        // wait for a key with 5 miliseconds
-        if (waitKey(5) >= 0)
-            break;
-#endif
-        // store the image  
-//         Mat frame=my_camera.getFrame();
-        imwrite("test.jpg", frame);
-        // break;
-        // call a function to process the image, passing by reference
-
-        vector<Point> image_locations;
-//        cout<<"before launch test"<<endl;
-        image_locations = my_vision.processing(frame);
-        // cout<<"detected positions"<<endl;
-        // for (auto &point: image_locations) {
-        //     cout << "(" << point.x << "," << point.y << ")" << endl;
-        // }
-        vector<cv::Point> inserted;
-        vector<cv::Point> deleted;
-
-        devices_manager_interface.updateLocationMapping(image_locations, inserted, deleted);
-        // cout<<"inserted positions"<<endl;
-        // for(auto& point:inserted){
-
-        //     cout << "(" << point.x << "," << point.y << ")" << endl;
-        // }
-        // cout<<"removed positions"<<endl;
-        // for(auto& point:deleted){
-
-        //     cout << "(" << point.x << "," << point.y << ")" << endl;
-        // }
-        if (!visionNeedsHandling && (inserted.size() || deleted.size())){
-            newDevices = inserted;
-            removedDevices = deleted;
-            visionNeedsHandling = true;
-        }
-
-    }
-#endif
-
-#if !CAMERA
-    // read from the cmd arg
-    if( argc != 15) {
-        cout <<" Usage: ./VisionUnitTest image_to_process min_contour_area max_contour_area extend black_value_pick_up white_value_pick_up gamma_val_darker gamma_val_brighter high_H_ low_H_ high_S_ low_S_ high_V_ low_V_ " << endl;
-        return -1;
-    }
-    Mat frame=imread(argv[1]); 
-    if (frame.empty()) {
-        cerr << "ERROR! blank frame grabbed\n";
-    }
-    // imshow("Live", frame);
-    Vision my_vision;
-    // some extra code to help fine-tune the parameter
-    my_vision.min_contour_area_=atoi(argv[2]);
-    my_vision.max_contour_area_=atoi(argv[3]);
-    my_vision.extend_threshold_ = atof(argv[4]);
-    my_vision.black_value_pick_up_=atoi(argv[5]);
-    my_vision.white_value_pick_up_=atoi(argv[6]);
-    my_vision.gamma_val_darker_=atof(argv[7]);
-    my_vision.gamma_val_hsv_=atof(argv[8]);
-    // cout<<"checking value "<<min_contour_area<<" "<<max_contour_area<<" "<<extend_threshold<<" "<<black_value_pick_up<<" "<<gamma_val_darker<<endl;
-    my_vision.high_H_ = atof(argv[9]);
-    my_vision.low_H_ = atof(argv[10]);
-    my_vision.high_S_ = atof(argv[11]);
-    my_vision.low_S_ = atof(argv[12]);
-    my_vision.high_V_ = atof(argv[13]);
-    my_vision.low_V_ = atof(argv[14]);
-
-    
-    my_vision.processing(frame);
-#endif
-    // close the file
-    // the camera will be deinitialized automatically in VideoCapture destructor
-    return 0;
-}
 
 vector<Point> Vision::processing(Mat &frame) {
     // good source of image processing 
@@ -182,7 +56,9 @@ vector<Point> Vision::processing(Mat &frame) {
     Mat image_BrightnessThreshold_white_obj;
     Mat gamma_corrected_darker=frame.clone();
     Mat gamma_corrected_hsv=frame.clone();
-    Mat drawing = Mat::zeros(frame.size(), CV_8UC3);
+    Mat image_threshold_hsv_inv;
+    Mat drawing_black_obj = Mat::zeros(frame.size(), CV_8UC3);
+    Mat drawing_white_obj = Mat::zeros(frame.size(), CV_8UC3);
     // --------------- Gray the image and smooth it --------------
     // convert original image to gray image and apply smoothing
     
@@ -209,7 +85,8 @@ vector<Point> Vision::processing(Mat &frame) {
     imwrite("test_hsv_img.jpg",frame_HSV);
     // blur(image_threshold_hsv, image_threshold_hsv_blur, Size(15, 15));
     imwrite("test_image_threshold_hsv.jpg",image_threshold_hsv);
-    // imwrite("test_image_threshold_hsv_blur.jpg",image_threshold_hsv_blur);
+    threshold(image_threshold_hsv, image_threshold_hsv_inv, black_value_pick_up_, 255, THRESH_BINARY_INV);
+    imwrite("test_image_threshold_hsv_inv.jpg",image_threshold_hsv_inv);
 
 
 
@@ -224,34 +101,34 @@ vector<Point> Vision::processing(Mat &frame) {
     // --------- thresholding the image ----------
     threshold(gamma_corrected_darker, image_BrightnessThreshold_black_obj, black_value_pick_up_, 255, THRESH_BINARY_INV);
     imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
-    vector<RotatedRect> BoundingBox = this->findBoundingBox(image_BrightnessThreshold_black_obj, drawing);
+    
+    vector<vector<Point>> contours_black=find_draw_contours(image_BrightnessThreshold_black_obj,drawing_black_obj);
+    // draw_contours(contours_black, drawing_black_obj);
+    imwrite("test_contours_black_obj.jpg",drawing_black_obj);
+    vector<RotatedRect> BoundingBox = findBoundingBox(image_BrightnessThreshold_black_obj,contours_black);
 #if SHOW_THRESHOLD_IMAGE
     imshow("thresholding", image_BrightnessThreshold_black_obj);
     waitKey(5);
 #endif
     // bigger threshold means the pixel need to be bright enough to be set to light
-    threshold(image_threshold_hsv, image_BrightnessThreshold_white_obj, white_value_pick_up_, 255, THRESH_BINARY);
+    threshold(image_threshold_hsv_inv, image_BrightnessThreshold_white_obj, white_value_pick_up_, 255, THRESH_BINARY);
     imwrite("test_threshold_white_obj.jpg", image_BrightnessThreshold_white_obj);
-    vector<RotatedRect> BoundingBox_white = this->findBoundingBox(image_BrightnessThreshold_white_obj, drawing);
+    vector<vector<Point>> contours_white=find_draw_contours(image_BrightnessThreshold_white_obj,drawing_white_obj);
+    // draw_contours(contours_white, drawing_white_obj);
+    imwrite("test_contours_white_obj.jpg",drawing_white_obj);
+    vector<RotatedRect> BoundingBox_white = this->findBoundingBox(image_BrightnessThreshold_white_obj,contours_white);
     // now draw the rectangle on the mat
+
+    draw_bounding_box(BoundingBox,drawing_black_obj,frame);
+    imwrite("test_bouding_box_black_obj.jpg",frame);
+    draw_bounding_box(BoundingBox,drawing_white_obj,frame);
+    imwrite("test_bouding_box_white+black_obj.jpg",frame);
     //  TO DO: change it to use draw annoted function
     BoundingBox.insert(BoundingBox.end(), BoundingBox_white.begin(), BoundingBox_white.end());
     // filter the bounding box
+
+
     // draw the bounding box
-    for (auto &rect: BoundingBox) {
-        // color are specified in (B,G,R); 
-        // draw bounding box on contour
-        this->drawRotatedRect(drawing, rect, Scalar(0, 255, 255));
-        // draw bounding box on original image
-        this->drawRotatedRect(frame, rect, Scalar(0, 255, 255));
-
-        // cout << "(" << rect.center.x << ", " << rect.center.y << ")    "
-        //     << rect.size.width << " x " << rect.size.height << "    "
-        //     << rect.angle << "°"<<endl;
-    }
-    imwrite( "test_contours_filter.jpg", drawing );
-    imwrite("test_annoted.jpg", frame);
-
 #if SHOW_ANNOTED_IMAGE
     imshow("annoted", frame);
     waitKey(5);
@@ -266,7 +143,21 @@ vector<Point> Vision::processing(Mat &frame) {
     return locations;
 }
 
+void Vision::draw_bounding_box(vector<RotatedRect>& BoundingBox, Mat& drawing, Mat& frame ){
+      for (auto &rect: BoundingBox) {
+        // color are specified in (B,G,R); 
+        // draw bounding box on contour
+        this->drawRotatedRect(drawing, rect, Scalar(0, 255, 255));
+        // draw bounding box on original image
+        this->drawRotatedRect(frame, rect, Scalar(0, 255, 255));
 
+        // cout << "(" << rect.center.x << ", " << rect.center.y << ")    "
+        //     << rect.size.width << " x " << rect.size.height << "    "
+        //     << rect.angle << "°"<<endl;
+        // imwrite( "test_contours_filter_obj.jpg", drawing );
+        // imwrite("test_annoted_obj.jpg", frame);
+    }
+}
 // (0,0)----x----
 // |             |
 // y             y
@@ -295,28 +186,34 @@ void Vision::gammaCorrection(const Mat &img, Mat& gamma_corrected,const double g
     
 }
 
-vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold, Mat &drawing) {
-    // find counter (it find contour of white object from black background on binary image, )
-    // In OpenCV, finding contours is like finding white object from black background. 
-    // So remember, object to be found should be white and background should be black.
-    // Mat countour_out;
-    // ------- Finding contour of image --------
+vector<vector<Point>> Vision::find_draw_contours(const cv::Mat &image_BrightnessThreshold, Mat& drawing){
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
     Mat coutoursOuts = image_BrightnessThreshold.clone();
 
     findContours(coutoursOuts, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
     cout<<"before filtering, the number of contour is: "<<contours.size()<<endl;
-    // cout<<"output image size "<<coutoursOuts.size()<<endl;
 
     for (size_t i = 0; i < contours.size(); i++) {
         Scalar color = Scalar(rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256));
         drawContours(drawing, contours, (int) i, color, 2, LINE_8, hierarchy, 0);
     }
-#if SHOW_CONTOUR_IMAGE
-    imshow( "Contours", drawing );
-    waitKey(5);
-#endif
+    #if SHOW_CONTOUR_IMAGE
+        imshow( "Contours", drawing );
+        waitKey(5);
+    #endif
+    return contours;
+}
+
+vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold, vector<vector<Point>>& contours) {
+    // find counter (it find contour of white object from black background on binary image, )
+    // In OpenCV, finding contours is like finding white object from black background. 
+    // So remember, object to be found should be white and background should be black.
+    // Mat countour_out;
+    // ------- Finding contour of image --------
+    
+    // cout<<"output image size "<<coutoursOuts.size()<<endl;
+
     // imwrite( "test_contours.jpg", drawing );
 
     // ----------- find the bounding box based on contour ----------
