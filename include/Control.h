@@ -19,7 +19,7 @@ bool operator==(cv::Point const& a, cv::Point const& b){
 }
 
 bool operator!=(cv::Point const& a, cv::Point const& b){
-    return (a.x != b.x) && (a.y != b.y);
+    return (a.x != b.x) || (a.y != b.y);
 }
 
 struct PointLess {

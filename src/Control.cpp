@@ -100,6 +100,10 @@ int Control::scheduleWaiting(){
                     toIgnore.insert(curCoilPositions[i]);
                     chargeable.insert(make_pair(curCoilPositions[i], Device(curCoilPositions[i])));
 
+                    if (unchargeable.find(curCoilPositions[i]) != unchargeable.end()){
+                        unchargeable.erase(curCoilPositions[i]);
+                    }
+
                     break;
 
                 // A device is removed/finished charging
@@ -276,6 +280,9 @@ int Control::scheduleCalculating(){
 }
 
 int Control::scheduleMoving1(){
+    
+    bool needMoving = false; // for moving the idle coils to initial position
+    
     // Send the moving commands
     while(!movingCommands.empty()){
         
@@ -306,29 +313,44 @@ int Control::scheduleMoving1(){
         
         if (curStatus == ChargerManager::CHARGING){
              
-            // Add the device if it is a new chargebale device
-            if (chargeable.find(c.second) == chargeable.end()){
-                
-                chargeable.insert(make_pair(c.second, Device(c.second)));  
+            if (oldStatus[c.first] == ChargerManager::NOT_CHARGING) idleCoilCount--;
 
+            // Add the device if it is a new chargebale device
+            if (chargeable.find(c.second) == chargeable.end()){               
+                chargeable.insert(make_pair(c.second, Device(c.second)));  
+            }
+
+            if (unchargeable.find(c.second) != unchargeable.end()){
+                unchargeable.erase(c.second);
             }
 
 
         } else {
             
-            if (unchargeable.find(c.second) == unchargeable.end()){
-                
-                unchargeable.insert(make_pair(c.second, Device(c.second)));  
+            if (oldStatus[c.first] == ChargerManager::CHARGING) idleCoilCount++;
+            needMoving = true; 
 
+            if (unchargeable.find(c.second) == unchargeable.end()){               
+                unchargeable.insert(make_pair(c.second, Device(c.second)));    
+            }
+
+            if (chargeable.find(c.second) != chargeable.end()){
+                chargeable.erase(c.second);
             }
         }
 
         oldStatus[c.first] = curStatus;
+        curCoilPositions[c.first] = c.second;
 
     }
     
 
-    curState = WAITING;
+    if (needMoving){
+        curState = CALCULATING;
+    } else {
+        curState = WAITING;
+    }
+
     return 0;
 }
 
