@@ -30,6 +30,7 @@ add_executable(QiTable
 
 add_executable(VisionUnitTest
         src/DeviceManager.cpp
+        src/ParameterTuning.cpp
         src/Camera.cpp
         src/Vision.cpp)
 
