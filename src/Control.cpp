@@ -207,17 +207,20 @@ int Control::scheduleCalculating(){
     while(toSchedule.size() > 0 && availableCoils > 0){
         auto curDevice = *toSchedule.begin();
         curSchedule.insert(curDevice);
+        schedulingNew.insert(curDevice);
         toSchedule.erase(curDevice);
         availableCoils--;
     }
 
     // New device to schedule
-    unordered_map<int, cv::Point> coilTarget;
+    unordered_map<cv::Point, int> coilTarget;
     if (curSchedule.size() > 0){
+        
         // Collect currently charging devices into the scheduling
         for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
             if (oldStatus[i] == ChargerManager::CHARGING){
                 curSchedule.insert(curCoilPositions[i]);
+                schedulingOld.insert(curCoilPositions[i]);
             }
         }
 
@@ -242,22 +245,34 @@ int Control::scheduleCalculating(){
             // Add the device with the smallest distance to be the target
             cv::Point curTarget = distance[0].second;
             curSchedule.erase(curTarget);
-            if (curTarget != curCoilPositions[i]) coilTarget.insert(make_pair(i, curTarget));
+            if (curTarget != curCoilPositions[i]) coilTarget.insert(make_pair(curTarget, i));
             
         }
         
-        // Fill the moving queue TODO: Does the order matter?
+        // Fill the moving queue TODO:
+        // Order: to avoid coil conflict, the devices with no coil under it are scheduled first
+        // Start with a new devices (garentee to have no coil under it)
+        // for (const auto& newSche : schedulingNew){
+        //     auto curTarget = coilTarget[newSche];
+        //     movingCommands.push_back(make_pair(curTarget.second, curTarget.first));
+
+        // }
+        
+        
         for (const auto& target : coilTarget){
-            movingCommands.push_back(make_pair(curCoilPositions[target.first], target.second));
+            movingCommands.push_back(make_pair(target.first, target.second));
         }
     }
 
-    // Move the coils to corner if there are idle ones
+    // Move the coils to corner if there are idle ones 
     for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
+        
         if (oldStatus[i] == ChargerManager::NOT_CHARGING && 
             coilTarget.find(i) == coilTarget.end() &&
             curCoilPositions[i] != initialPositions[i]){
-            movingCommands.push(make_pair(curCoilPositions[i], initialPositions[i]));
+            
+            movingCommands.push(make_pair(i, initialPositions[i]));
+        
         }
     }
 
@@ -271,12 +286,55 @@ int Control::scheduleCalculating(){
 int Control::scheduleMoving1(){
     // Send the moving commands
     while(!movingCommands.empty()){
+        
+        // Issue the command
         auto c = movingCommands.front();
         movingCommands.pop();
-        grabberController.issueGrabberMovement(c.first.x, c.first.y, c.second.x, c.second.y);
+        auto& coil = curCoilPositions[c.first]
+        grabberController.issueGrabberMovement(coil.x, coil.y, c.second.x, c.second.y);
+
+        // Wait until complete and check the final wireless charging status
+        sleep(5); // TODO: garenttee to finish!
+
+        // Update the status according to wireless read
+
+        auto curStatus = chargerManager.getChargerStatus(c.first);
+        // Retry for once if the status is unknown
+        if (curStatus == ChargerManager::UNKNOWN) {
+            usleep(500000);
+            curStatus = chargerManager.getChargerStatus(c.first);
+
+            if (curStatus == ChargerManager::UNKNOWN){
+                ERROR_("Pull charging status failed");
+            }
+        }
+
+        // 4 cases for wireless coil status change {Charging, Not charging} -> {Charging, Not charging}
+        // According to the notes, they can be merged. Only the final status matter
+        
+        if (curStatus == ChargerManager::CHARGING){
+             
+            // Add the device if it is a new chargebale device
+            if (chargeable.find(c.second) == chargeable.end()){
+                
+                chargeable.insert(make_pair(c.second, Device(c.second)));  
+
+            }
+
+
+        } else {
+            
+            if (unchargeable.find(c.second) == unchargeable.end()){
+                
+                unchargeable.insert(make_pair(c.second, Device(c.second)));  
+
+            }
+        }
+
+        oldStatus[c.first] = curStatus;
+
     }
     
-    // Wait until complete and check the final wireless charging status ?
 
     curState = WAITING;
     return 0;

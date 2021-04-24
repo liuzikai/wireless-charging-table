@@ -96,7 +96,10 @@ private:
     std::unordered_map<cv::Point, Device, MyHash> unchargeable;
     
     std::set<cv::Point> toSchedule;
-    std::queue<std::pair<cv::Point, cv::Point> > movingCommands;
+
+    std::set<cv::Point> schedulingNew; // The new devices in scheduling
+    std::set<cv::Point> schedulingOld; // The old devices rescheduling (coil change)
+    std::queue<std::pair<int, cv::Point> > movingCommands; // (coil index, target)
 
     cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT];
 
