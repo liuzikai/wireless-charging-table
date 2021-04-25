@@ -43,19 +43,24 @@ RNG rng(12345);
 // https://docs.opencv.org/master/d6/d55/tutorial_table_of_content_calib3d.html
 // https://docs.opencv.org/master/d4/d94/tutorial_camera_calibration.html
 
-void Vision::image_calibration(Mat& frame, Mat& frameCalibration){
+void Vision::image_calibration(const Mat& frame, Mat& frameCalibration){
+//    for parameter setting follow this link
+//    https://blog.csdn.net/Loser__Wang/article/details/51811347
     Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
-    cameraMatrix.at<double>(0, 0) = 342.3936;
-    cameraMatrix.at<double>(0, 1) = -0.0265;
-    cameraMatrix.at<double>(0, 2) = 320.3885;
-    cameraMatrix.at<double>(1, 1) = 342.2803;
-    cameraMatrix.at<double>(1, 2) = 174.8987;
+    cameraMatrix.at<double>(0, 0) = 1308.0;
+    cameraMatrix.at<double>(0, 1) = -5.8;
+    cameraMatrix.at<double>(0, 2) = 649.6;
+    cameraMatrix.at<double>(1, 1) = 1314.6;
+    cameraMatrix.at<double>(1, 2) = 370.3 ;
 
     Mat distCoeffs = Mat::zeros(5, 1, CV_64F);
-    distCoeffs.at<double>(0, 0) = 0.0396;
-    distCoeffs.at<double>(1, 0) = -0.0614;
-    distCoeffs.at<double>(2, 0) = 0.0008;
-    distCoeffs.at<double>(3, 0) = -0.0012;
+//    first two terms are radian distortion
+    distCoeffs.at<double>(0, 0) = 0.1795;
+    distCoeffs.at<double>(1, 0) = -0.8530;
+//    next two terms are tangantial distoration
+    distCoeffs.at<double>(2, 0) = -0.0018;
+    distCoeffs.at<double>(3, 0) = 1.7887e-05;
+//  keep it as 0
     distCoeffs.at<double>(4, 0) = 0;
 
     Mat view, map1, map2;
@@ -70,7 +75,7 @@ void Vision::image_calibration(Mat& frame, Mat& frameCalibration){
 vector<RotatedRect> Vision::processing(Mat &frame) {
     // good source of image processing 
     // https://docs.opencv.org/3.4/d2/d96/tutorial_py_table_of_contents_imgproc.html
-//    imwrite("test.jpg", frame);
+    imwrite("test.jpg", frame);
     Mat frame_HSV;
     Mat image_threshold_hsv;
     Mat image_threshold_hsv_blur;
@@ -87,10 +92,10 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
     // convert original image to gray image and apply smoothing
 
     cvtColor(frame, gray_image, COLOR_BGR2GRAY);
-//    imwrite("test_gray.jpg", gray_image);
+    imwrite("test_gray.jpg", gray_image);
     // kernel size is 9 by 9
     blur(gray_image, gray_image_blur, Size(blur_kernel_size_, blur_kernel_size_));
-//    imwrite("test_gray_smooth.jpg", gray_image_blur);
+    imwrite("test_gray_smooth.jpg", gray_image_blur);
 #if SHOW_GRAY_IMAGE
     imshow("gray", gray_image);
     waitKey(5);
@@ -98,7 +103,7 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
     // --------------- Gamma correction ---------------
     // it will convert the image to darker 
     gammaCorrection(gray_image_blur, gamma_corrected_darker, gamma_val_darker_);
-//    imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
+    imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
 
     gammaCorrection(frame, gamma_corrected_hsv, gamma_val_hsv_);
 //    imwrite("test_gamma_correction_whiter.jpg", gamma_corrected_hsv);
@@ -125,11 +130,11 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
     // --------- thresholding the image ----------
     threshold(gamma_corrected_darker, image_BrightnessThreshold_black_obj, black_value_pick_up_, 255,
               THRESH_BINARY_INV);
-//    imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
+    imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
 
     vector<vector<Point>> contours_black = find_draw_contours(image_BrightnessThreshold_black_obj, drawing_black_obj);
     // draw_contours(contours_black, drawing_black_obj);
-//    imwrite("test_contours_black_obj.jpg", drawing_black_obj);
+    imwrite("test_contours_black_obj.jpg", drawing_black_obj);
     vector<RotatedRect> BoundingBox = findBoundingBox(image_BrightnessThreshold_black_obj, contours_black);
 #if SHOW_THRESHOLD_IMAGE
     imshow("thresholding", image_BrightnessThreshold_black_obj);
@@ -145,9 +150,9 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
     // now draw the rectangle on the mat
 
     draw_bounding_box(BoundingBox, drawing_black_obj, frame);
-//    imwrite("test_bouding_box_black_obj.jpg", frame);
+    imwrite("test_bouding_box_black_obj.jpg", frame);
     draw_bounding_box(BoundingBox, drawing_white_obj, frame);
-//    imwrite("test_bouding_box_white+black_obj.jpg", frame);
+    imwrite("test_bouding_box_white+black_obj.jpg", frame);
     //  TO DO: change it to use draw annoted function
     BoundingBox.insert(BoundingBox.end(), BoundingBox_white.begin(), BoundingBox_white.end());
     // filter the bounding box

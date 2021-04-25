@@ -44,13 +44,13 @@ public:
 
     std::vector<std::vector<cv::Point>> find_draw_contours(const cv::Mat &image_BrightnessThreshold, cv::Mat &drawing);
 
-    void image_calibration(cv::Mat& frame, cv::Mat& frameCalibration);
+    void image_calibration(const cv::Mat& frame, cv::Mat& frameCalibration);
     // member variable 
     int blur_kernel_size_ = 9;
     int min_contour_area_ = 2500;
     int max_contour_area_ = 10000000;
     // extend is the ratio between the contour area and the bounding box area
-    float extend_threshold_ = 0.8;
+    float extend_threshold_ = 0.75;
     // smaller threshold means the pixel need to be dark enough to be set to light (so to be detected)
     int black_value_pick_up_ = 30;
     // bigger threshold means the pixel need to be bright enough to be set to light (so to be detected)

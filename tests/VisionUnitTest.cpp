@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
            cerr << "ERROR! blank frame grabbed\n";
            break;
        }
-//        my_vision.image_calibration(frame, frameCalibration);
+
 #if SHOW_ORIG_IMAGE
        // show live and wait for a key with timeout long enough to show images
        imshow("Live", frame);
@@ -66,13 +66,20 @@ int main(int argc, char **argv) {
 #endif
        // store the image
 //         Mat frame=my_camera.getFrame();
-    //    imwrite("test.jpg", frame);
-       // break;
+
        // call a function to process the image, passing by reference
 
         vector<RotatedRect> image_RotatedRect;
     //        cout<<"before launch test"<<endl;
-        image_RotatedRect = my_vision.processing(frame);
+
+        my_vision.image_calibration(frame, frameCalibration);
+       cv::Range rows(40, 680);
+       cv::Range cols(110, 1170);
+       Mat frameCalibration_crop = frameCalibration(rows, cols);
+       image_RotatedRect = my_vision.processing(frameCalibration_crop);
+       imwrite("test.jpg", frame);
+       imwrite("test_calib.jpg", frameCalibration);
+//        break;
         // cout<<"detected positions"<<endl;
         // for (auto &point: image_locations) {
         //     cout << "(" << point.x << "," << point.y << ")" << endl;
@@ -113,7 +120,7 @@ int main(int argc, char **argv) {
 
 #if !CAMERA
    // read from the cmd arg
-   if( argc != 15) {
+   if( argc != 6) {
        cout <<" Usage: ./VisionUnitTest image_to_process min_contour_area max_contour_area extend black_value_pick_up white_value_pick_up gamma_val_darker gamma_val_brighter high_H_ low_H_ high_S_ low_S_ high_V_ low_V_ " << endl;
        return -1;
    }
@@ -122,25 +129,35 @@ int main(int argc, char **argv) {
        cerr << "ERROR! blank frame grabbed\n";
    }
    // imshow("Live", frame);
-   Vision my_vision;
-   // some extra code to help fine-tune the parameter
-   my_vision.min_contour_area_=atoi(argv[2]);
-   my_vision.max_contour_area_=atoi(argv[3]);
-   my_vision.extend_threshold_ = atof(argv[4]);
-   my_vision.black_value_pick_up_=atoi(argv[5]);
-   my_vision.white_value_pick_up_=atoi(argv[6]);
-   my_vision.gamma_val_darker_=atof(argv[7]);
-   my_vision.gamma_val_hsv_=atof(argv[8]);
-   // cout<<"checking value "<<min_contour_area<<" "<<max_contour_area<<" "<<extend_threshold<<" "<<black_value_pick_up<<" "<<gamma_val_darker<<endl;
-   my_vision.high_H_ = atof(argv[9]);
-   my_vision.low_H_ = atof(argv[10]);
-   my_vision.high_S_ = atof(argv[11]);
-   my_vision.low_S_ = atof(argv[12]);
-   my_vision.high_V_ = atof(argv[13]);
-   my_vision.low_V_ = atof(argv[14]);
 
-
-   my_vision.processing(frame);
+    Vision my_vision;
+    Mat frameCalibration;
+    my_vision.image_calibration(frame, frameCalibration);
+//   // some extra code to help fine-tune the parameter
+//   my_vision.min_contour_area_=atoi(argv[2]);
+//   my_vision.max_contour_area_=atoi(argv[3]);
+//   my_vision.extend_threshold_ = atof(argv[4]);
+//   my_vision.black_value_pick_up_=atoi(argv[5]);
+//   my_vision.white_value_pick_up_=atoi(argv[6]);
+//   my_vision.gamma_val_darker_=atof(argv[7]);
+//   my_vision.gamma_val_hsv_=atof(argv[8]);
+//   // cout<<"checking value "<<min_contour_area<<" "<<max_contour_area<<" "<<extend_threshold<<" "<<black_value_pick_up<<" "<<gamma_val_darker<<endl;
+//   my_vision.high_H_ = atof(argv[9]);
+//   my_vision.low_H_ = atof(argv[10]);
+//   my_vision.high_S_ = atof(argv[11]);
+//   my_vision.low_S_ = atof(argv[12]);
+//   my_vision.high_V_ = atof(argv[13]);
+//   my_vision.low_V_ = atof(argv[14]);
+    Mat frameCalibration_crop;
+    int row_start=atoi(argv[2]);
+    int row_end = atoi(argv[3]);
+    int col_start=atoi(argv[4]);
+    int col_end = atoi(argv[5]);
+    cv::Range rows(row_start, row_end);
+    cv::Range cols(col_start, col_end);
+    frameCalibration_crop = frameCalibration(rows, cols);
+    imwrite("test_frameCalibration_crop.jpg",frameCalibration_crop);
+    my_vision.processing(frameCalibration_crop);
 #endif
    // close the file
    // the camera will be deinitialized automatically in VideoCapture destructor
