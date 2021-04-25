@@ -12,7 +12,7 @@ message(VERBOSE "    Includes: " ${OpenCV_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 # Find boost
-find_package(Boost REQUIRED system)
+find_package(Boost REQUIRED system filesystem)
 
 # Compile lib from source
 add_subdirectory(lib)

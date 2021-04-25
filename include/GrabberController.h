@@ -14,19 +14,21 @@ public:
 
     /**
      * Instantiate a GrabberController using the given serial port.
-     * @param serialDevice
-     * @param baudRate
      */
-    explicit GrabberController(const string &serialDevice, unsigned baudRate);
+    explicit GrabberController();
 
     /**
-     * Issue a series of movements to move a coil: attach, move, detach.
-     * @param srcX   The current X coordinate of the coil
-     * @param srcY   The current Y coordinate of the coil
-     * @param destX  The designation X coordinate
-     * @param destY  The designation Y coordinate
+     * Move the grabber to the target position, attached. This function returns immediately.
+     * @param x     The designation X coordinate
+     * @param y     The designation Y coordinate
+     * @param fast  Whether to move the grabber in the fast speed
      */
-    void issueGrabberMovement(float srcX, float srcY, float destX, float destY);
+    void moveGrabber(float x, float y, bool fast = false);
+
+    /**
+     * Detach the grabber and move back to (0, 0)
+     */
+    void resetGrabber();
 
 private:
 
@@ -35,11 +37,13 @@ private:
     boost::asio::io_context ioContext;
     boost::asio::serial_port serial;
 
+    static constexpr const char *SERIAL_DEVICE_PREFIX = "/dev/ttyACM";
+    static constexpr int SERIAL_BAUD_RATE = 115200;
+
     void serialSendCommand(const string &s);
 
     static constexpr unsigned FLOAT_PRECISION = 1;
 
-    // TODO: calibrate on the mechanical structure
     static constexpr float Z_DETACHED = 31;
     static constexpr float Z_ATTACHED = 51;
 

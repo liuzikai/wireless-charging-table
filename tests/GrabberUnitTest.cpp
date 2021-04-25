@@ -4,23 +4,25 @@
 
 #include "GrabberController.h"
 
-// TODO: serial device name
-GrabberController grabber("/dev/ttyACM1", 115200);
+GrabberController grabber;
 
 int main() {
 
-    float srcX, srcY, destX, destY;
+    float x, y;
 
     while(true) {
 
-        std::cout << "(srcX, srcY, destX, destY), -1 to exit: ";
-        std::cin >> srcX;
-        if (srcX == -1) break;
-        std::cin >> srcY >> destX >> destY;
-
-        grabber.issueGrabberMovement(srcX, srcY, destX, destY);
+        std::cout << "(X, Y), -1 to reset, -2 to exit: ";
+        std::cin >> x;
+        if (x == -1) {
+            grabber.resetGrabber();
+        } else if (x == -2) {
+            break;
+        } else {
+            std::cin >> y;
+            grabber.moveGrabber(x, y);
+        }
     }
-
     return 0;
 
 }

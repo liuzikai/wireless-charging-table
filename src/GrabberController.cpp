@@ -5,10 +5,25 @@
 #include "GrabberController.h"
 #include <iomanip>
 
-GrabberController::GrabberController(const string &serialDevice, unsigned baudRate)
-        : serial(ioContext, serialDevice) {
+GrabberController::GrabberController()
+        : serial(ioContext) {
 
-    serial.set_option(boost::asio::serial_port::baud_rate(baudRate));
+    // Enumerate /dev/ttyACM0, /dev/ttyACM1, ..., /dev/ttyACM9
+    boost::system::error_code ec;
+    for (int i = 0; i < 10; i++) {
+        string device = SERIAL_DEVICE_PREFIX + std::to_string(i);
+        std::cout << "Serial: " << device << "...";
+        serial.open(device, ec);
+        if (!ec) {
+            std::cout << "succeeded" << std::endl;
+            break;
+        } else {
+            std::cout << "failed " << ec.message() << std::endl;
+        }
+    }
+    assert(!ec && "Failed to open the serial device");
+
+    serial.set_option(boost::asio::serial_port::baud_rate(SERIAL_BAUD_RATE));
     serial.set_option(boost::asio::serial_port::flow_control(boost::asio::serial_port::flow_control::none));
     serial.set_option(boost::asio::serial_port_base::character_size(8));
     serial.set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
@@ -16,15 +31,16 @@ GrabberController::GrabberController(const string &serialDevice, unsigned baudRa
     serialSendCommand("G28");  // home
 }
 
-void GrabberController::issueGrabberMovement(float srcX, float srcY, float destX, float destY) {
-    // Step 1: attach the grabber from src
-    issueMoveCommand(MOVE_SPEED_DETACHED, srcX, srcY, Z_ATTACHED);
+void GrabberController::moveGrabber(float x, float y, bool fast) {
+    issueMoveCommand(fast ? MOVE_SPEED_DETACHED : MOVE_SPEED_ATTACHED, x, y, Z_ATTACHED);
+}
 
-    // Step 2: move the coil
-    issueMoveCommand(MOVE_SPEED_ATTACHED, destX, destY);
-
-    // Step 3: release the coil
+void GrabberController::resetGrabber() {
+    // Step 1: detach
     issueMoveCommand(MOVE_SPEED_DETACHED, -1, -1, Z_DETACHED);
+
+    // Step 2: move back to the origin
+    issueMoveCommand(MOVE_SPEED_DETACHED, 0, 0);
 }
 
 void GrabberController::issueMoveCommand(unsigned speed, float x, float y, float z) {
