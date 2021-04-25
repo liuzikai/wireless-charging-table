@@ -29,14 +29,18 @@ extern Camera::ParameterSet cameraParams;
 
 class Vision {
 public:
-    // member variable
-    // member function
-    std::vector <cv::Point> processing(cv::Mat &frame);
+    std::vector<cv::Point> processing(cv::Mat &frame);
+
     void drawRotatedRect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &boarderColor);
-    std::vector <cv::RotatedRect> findBoundingBox(const cv::Mat &image_BrightnessThreshold, std::vector<std::vector<cv::Point>>& contours);
-    void gammaCorrection(const cv::Mat &img, cv::Mat & gamma_corrected, const double gamma_);
-    void draw_bounding_box(std::vector<cv::RotatedRect>& BoundingBox, cv::Mat& drawing, cv::Mat& frame );
-    std::vector<std::vector<cv::Point>> find_draw_contours(const cv::Mat &image_BrightnessThreshold, cv::Mat& drawing);
+
+    std::vector<cv::RotatedRect> findBoundingBox(const cv::Mat &image_BrightnessThreshold,
+                                                 std::vector<std::vector<cv::Point>> &contours);
+
+    void gammaCorrection(const cv::Mat &img, cv::Mat &gamma_corrected, double gamma_);
+
+    void draw_bounding_box(std::vector<cv::RotatedRect> &BoundingBox, cv::Mat &drawing, cv::Mat &frame);
+
+    std::vector<std::vector<cv::Point>> find_draw_contours(const cv::Mat &image_BrightnessThreshold, cv::Mat &drawing);
 
     // member variable 
     int blur_kernel_size_ = 9;
@@ -50,8 +54,8 @@ public:
     int white_value_pick_up_ = 180;
     float gamma_val_darker_ = 1.9;
     float gamma_val_hsv_ = 2.5;
-    float aspectRatio_max_ =2.5;
-    float aspectRatio_min_ =1.5;
+    float aspectRatio_max_ = 2.5;
+    float aspectRatio_min_ = 1.5;
     // hue range is [0,179], saturation range is [0,255], and value range is [0,255]
     // H between 0 to 360
     float high_H_ = 45;

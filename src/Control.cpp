@@ -8,12 +8,13 @@
 // #include <pthread.h>
 #include <assert.h>
 
-#include <JetsonGPIO.h>
 #include <set>
 #include <map>
 #include <algorithm>
 
 #include "Control.h"
+#include "ChargerManager.h"
+#include "GrabberController.h"
 
 #define ERROR_(message_) { \
     errorMessage = message_; \
@@ -30,6 +31,7 @@ extern vector<cv::Point> removedDevices;
 
 
 // static pthread_mutex_t pin_locks[ChargerManager::CHARGER_COUNT]; 
+
 
 
 /********************************* Public Functions *****************************/

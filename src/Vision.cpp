@@ -54,39 +54,39 @@ vector<Point> Vision::processing(Mat &frame) {
     Mat gray_image_blur;
     Mat image_BrightnessThreshold_black_obj;
     Mat image_BrightnessThreshold_white_obj;
-    Mat gamma_corrected_darker=frame.clone();
-    Mat gamma_corrected_hsv=frame.clone();
+    Mat gamma_corrected_darker = frame.clone();
+    Mat gamma_corrected_hsv = frame.clone();
     Mat image_threshold_hsv_inv;
     Mat drawing_black_obj = Mat::zeros(frame.size(), CV_8UC3);
     Mat drawing_white_obj = Mat::zeros(frame.size(), CV_8UC3);
     // --------------- Gray the image and smooth it --------------
     // convert original image to gray image and apply smoothing
-    
+
     cvtColor(frame, gray_image, COLOR_BGR2GRAY);
-    imwrite("test_gray.jpg",gray_image);
+    imwrite("test_gray.jpg", gray_image);
     // kernel size is 9 by 9
     blur(gray_image, gray_image_blur, Size(blur_kernel_size_, blur_kernel_size_));
-    imwrite("test_gray_smooth.jpg",gray_image_blur);
+    imwrite("test_gray_smooth.jpg", gray_image_blur);
 #if SHOW_GRAY_IMAGE
     imshow("gray", gray_image);
     waitKey(5);
 #endif
     // --------------- Gamma correction ---------------
     // it will convert the image to darker 
-    gammaCorrection(gray_image_blur, gamma_corrected_darker,gamma_val_darker_);
+    gammaCorrection(gray_image_blur, gamma_corrected_darker, gamma_val_darker_);
     imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
 
-    gammaCorrection(frame, gamma_corrected_hsv,gamma_val_hsv_);
+    gammaCorrection(frame, gamma_corrected_hsv, gamma_val_hsv_);
     imwrite("test_gamma_correction_whiter.jpg", gamma_corrected_hsv);
     // --------------- Try image segmentation using HSV color space --------------- 
     // cout<<high_H_<<endl;
     cvtColor(gamma_corrected_hsv, frame_HSV, COLOR_BGR2HSV);
     inRange(frame_HSV, Scalar(low_H_, low_S_, low_V_), Scalar(high_H_, high_S_, high_V_), image_threshold_hsv);
-    imwrite("test_hsv_img.jpg",frame_HSV);
+    imwrite("test_hsv_img.jpg", frame_HSV);
     // blur(image_threshold_hsv, image_threshold_hsv_blur, Size(15, 15));
-    imwrite("test_image_threshold_hsv.jpg",image_threshold_hsv);
+    imwrite("test_image_threshold_hsv.jpg", image_threshold_hsv);
     threshold(image_threshold_hsv, image_threshold_hsv_inv, black_value_pick_up_, 255, THRESH_BINARY_INV);
-    imwrite("test_image_threshold_hsv_inv.jpg",image_threshold_hsv_inv);
+    imwrite("test_image_threshold_hsv_inv.jpg", image_threshold_hsv_inv);
 
 
 
@@ -99,13 +99,14 @@ vector<Point> Vision::processing(Mat &frame) {
     // if the pixel > thres, set to 0, otherwise set to 255
     // smaller threshold means the pixel need to be dark enough to be set to light
     // --------- thresholding the image ----------
-    threshold(gamma_corrected_darker, image_BrightnessThreshold_black_obj, black_value_pick_up_, 255, THRESH_BINARY_INV);
+    threshold(gamma_corrected_darker, image_BrightnessThreshold_black_obj, black_value_pick_up_, 255,
+              THRESH_BINARY_INV);
     imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
-    
-    vector<vector<Point>> contours_black=find_draw_contours(image_BrightnessThreshold_black_obj,drawing_black_obj);
+
+    vector<vector<Point>> contours_black = find_draw_contours(image_BrightnessThreshold_black_obj, drawing_black_obj);
     // draw_contours(contours_black, drawing_black_obj);
-    imwrite("test_contours_black_obj.jpg",drawing_black_obj);
-    vector<RotatedRect> BoundingBox = findBoundingBox(image_BrightnessThreshold_black_obj,contours_black);
+    imwrite("test_contours_black_obj.jpg", drawing_black_obj);
+    vector<RotatedRect> BoundingBox = findBoundingBox(image_BrightnessThreshold_black_obj, contours_black);
 #if SHOW_THRESHOLD_IMAGE
     imshow("thresholding", image_BrightnessThreshold_black_obj);
     waitKey(5);
@@ -113,16 +114,16 @@ vector<Point> Vision::processing(Mat &frame) {
     // bigger threshold means the pixel need to be bright enough to be set to light
     threshold(image_threshold_hsv_inv, image_BrightnessThreshold_white_obj, white_value_pick_up_, 255, THRESH_BINARY);
     imwrite("test_threshold_white_obj.jpg", image_BrightnessThreshold_white_obj);
-    vector<vector<Point>> contours_white=find_draw_contours(image_BrightnessThreshold_white_obj,drawing_white_obj);
+    vector<vector<Point>> contours_white = find_draw_contours(image_BrightnessThreshold_white_obj, drawing_white_obj);
     // draw_contours(contours_white, drawing_white_obj);
-    imwrite("test_contours_white_obj.jpg",drawing_white_obj);
-    vector<RotatedRect> BoundingBox_white = this->findBoundingBox(image_BrightnessThreshold_white_obj,contours_white);
+    imwrite("test_contours_white_obj.jpg", drawing_white_obj);
+    vector<RotatedRect> BoundingBox_white = this->findBoundingBox(image_BrightnessThreshold_white_obj, contours_white);
     // now draw the rectangle on the mat
 
-    draw_bounding_box(BoundingBox,drawing_black_obj,frame);
-    imwrite("test_bouding_box_black_obj.jpg",frame);
-    draw_bounding_box(BoundingBox,drawing_white_obj,frame);
-    imwrite("test_bouding_box_white+black_obj.jpg",frame);
+    draw_bounding_box(BoundingBox, drawing_black_obj, frame);
+    imwrite("test_bouding_box_black_obj.jpg", frame);
+    draw_bounding_box(BoundingBox, drawing_white_obj, frame);
+    imwrite("test_bouding_box_white+black_obj.jpg", frame);
     //  TO DO: change it to use draw annoted function
     BoundingBox.insert(BoundingBox.end(), BoundingBox_white.begin(), BoundingBox_white.end());
     // filter the bounding box
@@ -143,8 +144,8 @@ vector<Point> Vision::processing(Mat &frame) {
     return locations;
 }
 
-void Vision::draw_bounding_box(vector<RotatedRect>& BoundingBox, Mat& drawing, Mat& frame ){
-      for (auto &rect: BoundingBox) {
+void Vision::draw_bounding_box(vector<RotatedRect> &BoundingBox, Mat &drawing, Mat &frame) {
+    for (auto &rect: BoundingBox) {
         // color are specified in (B,G,R); 
         // draw bounding box on contour
         this->drawRotatedRect(drawing, rect, Scalar(0, 255, 255));
@@ -158,6 +159,7 @@ void Vision::draw_bounding_box(vector<RotatedRect>& BoundingBox, Mat& drawing, M
         // imwrite("test_annoted_obj.jpg", frame);
     }
 }
+
 // (0,0)----x----
 // |             |
 // y             y
@@ -170,48 +172,47 @@ void Vision::draw_bounding_box(vector<RotatedRect>& BoundingBox, Mat& drawing, M
 // (1668.23, 1205.55)    501.65 x 535.506    -61.2602°
 // (1116.1, 255.104)    348.786 x 556.306    -17.6676°
 // (577.053, 79.5175)    244.472 x 592.656    -53.4007°
-void Vision::gammaCorrection(const Mat &img, Mat& gamma_corrected,const double gamma_)
-{
+void Vision::gammaCorrection(const Mat &img, Mat &gamma_corrected, double gamma_) {
     CV_Assert(gamma_ >= 0);
     // Mat img_gamma_corrected = Mat(img.rows, img.cols, img.type());
     //! [changing-contrast-brightness-gamma-correction]
     Mat lookUpTable(1, 256, CV_8U);
-    uchar* p = lookUpTable.ptr();
-    for( int i = 0; i < 256; ++i){
+    uchar *p = lookUpTable.ptr();
+    for (int i = 0; i < 256; ++i) {
         p[i] = saturate_cast<uchar>(pow(i / 255.0, gamma_) * 255.0);
     }
     LUT(img, lookUpTable, gamma_corrected);
     //! [changing-contrast-brightness-gamma-correction]
     // hconcat(img, res, img_gamma_corrected);
-    
+
 }
 
-vector<vector<Point>> Vision::find_draw_contours(const cv::Mat &image_BrightnessThreshold, Mat& drawing){
+vector<vector<Point>> Vision::find_draw_contours(const cv::Mat &image_BrightnessThreshold, Mat &drawing) {
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
     Mat coutoursOuts = image_BrightnessThreshold.clone();
 
     findContours(coutoursOuts, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    cout<<"before filtering, the number of contour is: "<<contours.size()<<endl;
+    cout << "before filtering, the number of contour is: " << contours.size() << endl;
 
     for (size_t i = 0; i < contours.size(); i++) {
         Scalar color = Scalar(rng.uniform(0, 256), rng.uniform(0, 256), rng.uniform(0, 256));
         drawContours(drawing, contours, (int) i, color, 2, LINE_8, hierarchy, 0);
     }
-    #if SHOW_CONTOUR_IMAGE
-        imshow( "Contours", drawing );
-        waitKey(5);
-    #endif
+#if SHOW_CONTOUR_IMAGE
+    imshow( "Contours", drawing );
+    waitKey(5);
+#endif
     return contours;
 }
 
-vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold, vector<vector<Point>>& contours) {
+vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold, vector<vector<Point>> &contours) {
     // find counter (it find contour of white object from black background on binary image, )
     // In OpenCV, finding contours is like finding white object from black background. 
     // So remember, object to be found should be white and background should be black.
     // Mat countour_out;
     // ------- Finding contour of image --------
-    
+
     // cout<<"output image size "<<coutoursOuts.size()<<endl;
 
     // imwrite( "test_contours.jpg", drawing );
@@ -220,7 +221,7 @@ vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold
     // Post-processing the contour, try to find the target one
     vector<RotatedRect> BoundingBox;
     for (const auto &contour : contours) {
-        
+
         // filtering contour size and contour area
         // cout<<"checking value of max contour area"<<max_contour_area<<endl;
         // cout<<"checking value of min contour area"<<min_contour_area<<endl;
@@ -256,15 +257,15 @@ vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold
         }
 
         // filtering extend
-        double extend =contourArea(contour)/rect_size;
-        if (extend < extend_threshold_){
+        double extend = contourArea(contour) / rect_size;
+        if (extend < extend_threshold_) {
             continue;
         }
         // accept the ratio
         BoundingBox.emplace_back(rect);
         // noteContours.annotate(rect);
     }
-    cout<<"number of rect "<<BoundingBox.size()<<endl;
+    cout << "number of rect " << BoundingBox.size() << endl;
     return BoundingBox;
 }
 

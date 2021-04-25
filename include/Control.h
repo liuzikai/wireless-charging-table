@@ -11,7 +11,10 @@
 
 #include "ChargerManager.h"
 #include "GrabberController.h"
-#include "Vision.h"
+
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core/types.hpp>
 
 class Control {
 public:
@@ -23,8 +26,6 @@ public:
     enum State {
         WAITING, CALCULATING, MOVING1, MOVING2, ERROR, NUM_STATES
     };
-
-    typedef int (Control::*ScheduleFunction)(void);
 
     /**
      * Launch the all the controls
@@ -75,6 +76,8 @@ private:
     };
 
     /********************************* Scheduling Controls *****************************/
+
+    using ScheduleFunction = int (*)();
 
     ScheduleFunction schedule[NUM_STATES];
 
