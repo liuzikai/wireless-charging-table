@@ -24,7 +24,7 @@ public:
 
     // ~Control();
 
-    bool controlMoving() {curState == MOVING1 || curState == MOVING2};
+    bool controlMoving() {return curState == MOVING1 || curState == MOVING2; };
 
 private:
 
@@ -43,15 +43,28 @@ private:
         }
     };
 
-    struct RotatedRectHash {
-        size_t operator()(cv::RotatedRect const &a) const {
-            return a.center.x * 500 + a.center.y;  // random choice
+    struct PointLess {
+        bool operator()(cv::Point const &a, cv::Point const &b) const {
+            if (a.x == b.x) return a.y < b.y;
+            else return a.x < b.x;
+        }
+    };
+
+    struct PointHash {
+        size_t operator()(cv::Point const &a) const {
+            return a.x * 500 + a.y;  // random choice
         }
     };
 
     // For the using of unordered_map on cv::RotatedRect TODO: stricter?
     struct RotatedRectEqual {
         bool operator()(cv::RotatedRect const &a, cv::RotatedRect const &b) const {
+            return (a.center.x == b.center.x) && (a.center.y == b.center.y);
+        }
+    };
+
+    struct PointEqual {
+        bool operator()(cv::Point const &a, cv::Point const &b) const {
             return (a.center.x == b.center.x) && (a.center.y == b.center.y);
         }
     };
@@ -114,14 +127,16 @@ private:
     std::string errorMessage;
 
     // Device status
-    std::unordered_map<cv::RotatedRect, Device, RotatedRectHash, RotatedRectEqual> chargeable;
-    std::unordered_map<cv::RotatedRect, Device, RotatedRectHash, RotatedRectEqual> unchargeable;
+    std::unordered_map<cv::Point, Device, PointHash, PointEqual> chargeable;
+    std::unordered_map<cv::Point, Device, PointHash, PointEqual> unchargeable;
 
     std::set<cv::RotatedRect, RotatedRectLess> toSchedule;
 
     std::set<cv::RotatedRect, RotatedRectLess> schedulingNew;  // the new devices in scheduling
     std::set<cv::RotatedRect, RotatedRectLess> schedulingOld;  // the old devices rescheduling (coil change)
+
     std::queue<std::pair<int, cv::RotatedRect> > movingCommands;  // (coil index, target)
+    std::queue<std::pair<int, cv::Point> > movingOldCommands; // (coil index, target) for rescheduled old devices
     std::queue<std::pair<int, cv::Point> > movingIdleCommands; // (coil index, target) for moving idle coils to initial position
 
     cv::Point initialPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0)};

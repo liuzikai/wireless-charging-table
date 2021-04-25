@@ -82,8 +82,8 @@ int Control::launch() {
 int Control::scheduleWaiting() {
 
     bool needMoving = false;
-    set<cv::RotatedRect, RotatedRectLess> toIgnore; // filled when new status is CHARGING
-    set<cv::RotatedRect, RotatedRectLess> toConfirm; // filled when new status is NOT_CHARGING
+    set<cv::Point, PointLess> toIgnore; // filled when new status is CHARGING
+    set<cv::Point, PointLess> toConfirm; // filled when new status is NOT_CHARGING
 
     // Pull for the wireless charging status
     for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++) {
@@ -154,9 +154,9 @@ int Control::scheduleWaiting() {
 
         for (const auto &removedDevice : removedDevices) {
             // Check the confirm: the removal has already been noticed by wireless charging
-            if (toConfirm.find(removedDevice) != toConfirm.end()) {
+            if (toConfirm.find(removedDevice.center) != toConfirm.end()) {
 
-                toConfirm.erase(removedDevice);
+                toConfirm.erase(removedDevice.center);
 
                 // The device was charging but taken away
                 // if (!chargeable.erase(removedDevice)) {
@@ -167,7 +167,7 @@ int Control::scheduleWaiting() {
             }
 
             // Remove the device that is either unchargeable or not scheduled
-            if (!unchargeable.erase(removedDevice)) {
+            if (!unchargeable.erase(removedDevice.center)) {
                 if (toSchedule.find(removedDevice) != toSchedule.end()) {
                     toSchedule.erase(removedDevice);
 //                    ERROR_("Unchargeable map or to schedule panic");
@@ -215,18 +215,20 @@ int Control::scheduleCalculating() {
 
     // Schedule the charging of devices if there are any
     // Collect ChargerManager::CHARGER_COUNT devices and reschedule all of them
-    set<cv::RotatedRect, RotatedRectLess> curSchedule;
+    set<cv::Point, PointLess> curSchedule;
+    unordered_map<cv::Point, cv::RotatedRect, PointHash, PointEqual> deviceMapping;
     int availableCoils = idleCoilCount;
     while (toSchedule.size() > 0 && availableCoils > 0) {
         auto curDevice = *toSchedule.begin();
-        curSchedule.insert(curDevice);
+        curSchedule.insert(curDevice.center);
+        deviceMapping.insert(make_pair(curDevice.center, curDevice));
         schedulingNew.insert(curDevice);
         toSchedule.erase(curDevice);
         availableCoils--;
     }
 
     // New device to schedule
-    unordered_map<int, cv::RotatedRect> coilTarget;
+    unordered_map<int, cv::Point> coilTarget;
     if (curSchedule.size() > 0) {
 
         // Collect currently charging devices into the scheduling
@@ -242,7 +244,7 @@ int Control::scheduleCalculating() {
         for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++) {
 
             // Didn't use map here since the distance may be the same for different devices
-            vector<pair<double, cv::RotatedRect> > distance;
+            vector<pair<double, cv::Point> > distance;
 
             // Collect the distances
             for (const auto &device : curSchedule) {
@@ -251,12 +253,12 @@ int Control::scheduleCalculating() {
 
             // Sort the distances
             sort(distance.begin(), distance.end(),
-                 [](const pair<double, cv::RotatedRect> &a, const pair<double, cv::RotatedRect> &b) -> bool {
+                 [](const pair<double, cv::Point> &a, const pair<double, cv::Point> &b) -> bool {
                      return a.first < b.first;
                  });
 
             // Add the device with the smallest distance to be the target
-            cv::RotatedRect curTarget = distance[0].second;
+            cv::Point curTarget = distance[0].second;
             curSchedule.erase(curTarget);
             if (curTarget != curCoilPositions[i]) coilTarget.insert(make_pair(i, curTarget));
 
@@ -273,7 +275,10 @@ int Control::scheduleCalculating() {
 
 
         for (const auto &target : coilTarget) {
-            movingCommands.push(make_pair(target.first, target.second));
+            if (deviceMapping.find(target.second) != deviceMapping.end())
+                movingCommands.push(make_pair(target.first, deviceMapping[target.second]));
+            else 
+                movingOldCommands.push(make_pair(target.first, target.second))
         }
     }
 
@@ -311,7 +316,7 @@ int Control::scheduleMoving1() {
         sleep(5); // TODO: garenttee to finish! 
     }
 
-    // Send the moving commands
+    // Send the moving commands for new devices
     while (!movingCommands.empty()) {
 
         // Issue the command
@@ -385,12 +390,12 @@ int Control::scheduleMoving1() {
             if (oldStatus[c.first] == ChargerManager::NOT_CHARGING) idleCoilCount--;
 
             // Add the device if it is a new chargebale device
-            if (chargeable.find(c.second) == chargeable.end()) {
-                chargeable.insert(make_pair(c.second, Device(c.second))); // TODO:
+            if (chargeable.find(curDevice.center) == chargeable.end()) {
+                chargeable.insert(make_pair(curDevice.center, Device(cv::Point(finalX, finalY)))); // TODO:
             }
 
-            if (unchargeable.find(c.second) != unchargeable.end()) {
-                unchargeable.erase(c.second);
+            if (unchargeable.find(curDevice.center) != unchargeable.end()) {
+                unchargeable.erase(curDevice.center);
             }
 
 
@@ -399,18 +404,46 @@ int Control::scheduleMoving1() {
             if (oldStatus[c.first] == ChargerManager::CHARGING) idleCoilCount++;
             needMoving = true;
 
-            if (unchargeable.find(c.second) == unchargeable.end()) {
-                unchargeable.insert(make_pair(c.second, Device(c.second)));
+            if (unchargeable.find(curDevice.center) == unchargeable.end()) {
+                unchargeable.insert(make_pair(c.second, Device(cv::Point(finalX, finalY))));
             }
 
-            if (chargeable.find(c.second) != chargeable.end()) {
-                chargeable.erase(c.second);
+            if (chargeable.find(curDevice.center) != chargeable.end()) {
+                chargeable.erase(curDevice.center);
             }
         }
 
         oldStatus[c.first] = curStatus;
         curCoilPositions[c.first] = cv::Point(finalX, finalY);
 
+    }
+
+    // Move for the rescheduled devices
+    while (!movingOldCommands.empty()){
+        auto c = movingOldCommands.front();
+        movingOldCommands.pop();
+        auto &coil = curCoilPositions[c.first];
+        grabberController.moveGrabber(coil.x, coil.y, true);
+        grabberController.moveGrabber(c.second.x, c.second.y);
+        grabberController.resetGrabber();
+
+        sleep(5); // TODO: garenttee to finish! 
+
+        auto curStatus = chargerManager.getChargerStatus(c.first);
+
+        if (curStatus != ChargerManager::CHARGING) {
+            
+            // Rescheduled device no longer chargeable
+            auto re = chargeable.find(c.second);
+
+            if (re != chargeable.end()){
+                unchargeable.emplace(*re);
+                chargeable.erase(re->first);
+            } else {
+                ERROR_("Chargeable map panic at reschedule");
+            }
+            
+        }
     }
 
 
