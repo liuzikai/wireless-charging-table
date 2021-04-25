@@ -17,6 +17,12 @@ ChargerManager::ChargerManager() {
     for (int i = 0; i < CHARGER_COUNT; i++) {
         GPIO::setup(RED_PINS[i], GPIO::IN);
         GPIO::setup(GREEN_PINS[i], GPIO::IN);
+        GPIO::cleanup(RED_PINS[i]);
+        GPIO::cleanup(GREEN_PINS[i]);
+    }
+    for (int i = 0; i < CHARGER_COUNT; i++) {
+        GPIO::setup(RED_PINS[i], GPIO::IN);
+        GPIO::setup(GREEN_PINS[i], GPIO::IN);
     }
     threadShouldExit = false;
     updateThread = std::thread(&ChargerManager::update, this);

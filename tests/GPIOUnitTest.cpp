@@ -14,6 +14,12 @@ int main() {
     GPIO::setmode(GPIO::BCM);
 
     for (int pin : PINS) {
+        GPIO::cleanup(pin);
+        GPIO::setup(pin, GPIO::Directions::IN);
+        GPIO::cleanup(pin);
+    }
+
+    for (int pin : PINS) {
         GPIO::setup(pin, GPIO::Directions::IN);
     }
 
