@@ -8,6 +8,7 @@
 #include <string>
 #include <set>
 #include <queue>
+#include <thread>
 
 #include "ChargerManager.h"
 #include "GrabberController.h"
@@ -23,18 +24,15 @@ public:
 
     // ~Control();
 
+private:
+
     enum State {
         WAITING, CALCULATING, MOVING1, MOVING2, ERROR, NUM_STATES
     };
 
-    /**
-     * Launch the all the controls
-     * The functions goes into an infinite loop of controlling and never returns
-     */
-    int launch();
+    std::thread *th = nullptr;
 
-
-private:
+    int launch();  // thread body, never returns
 
     struct PointLess {
         bool operator()(cv::Point const &a, cv::Point const &b) const {

@@ -16,6 +16,7 @@
 #include "ChargerManager.h"
 #include "GrabberController.h"
 
+// FIXME: [liuzikai] control thread should be robust for any possible errors
 #define ERROR_(message_) { \
     errorMessage = message_; \
     curState = ERROR; \
@@ -40,25 +41,38 @@ Control::Control() : chargerManager(), grabberController("/dev/ttyACM0", 115200)
 
     curState = WAITING;
 
-    // Fill the schedule functions table
-    schedule[0] = &Control::scheduleWaiting;
-    schedule[1] = &Control::scheduleCalculating;
-    schedule[2] = &Control::scheduleMoving1;
-    schedule[3] = &Control::scheduleMoving2;
-    schedule[4] = &Control::scheduleError;
-
     idleCoilCount = ChargerManager::CHARGER_COUNT;
 
+    th = new std::thread(&Control::launch, this);  // launch control thread
 }
 
 int Control::launch() {
+    // Control thread never exits
+    while (true) {
+        switch (curState) {
+            case WAITING:
+                scheduleWaiting();
+                break;
+            case CALCULATING:
+                scheduleCalculating();
+                break;
+            case MOVING1:
+                scheduleMoving1();
+                break;
+            case MOVING2:
+                scheduleMoving2();
+                break;
+            case ERROR:
+                scheduleError();
+                break;
+            case NUM_STATES:
+                std::cerr << "Control: invalid current state " << curState << std::endl;
+                curState = WAITING;
+                break;
+        }
 
-    while (1) {
-        (this->*(schedule[curState]))();
-        sleep(1); // Sleep for 1s
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-
-    return 0; // Should never reach here
 }
 
 
