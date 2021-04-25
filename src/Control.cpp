@@ -49,6 +49,7 @@ Control::Control() : chargerManager(), grabberController("/dev/ttyACM0", 115200)
 int Control::launch() {
     // Control thread never exits
     while (true) {
+        std::cout<<"current state: "<< curState <<std::endl;
         switch (curState) {
             case WAITING:
                 scheduleWaiting();
@@ -90,7 +91,7 @@ int Control::scheduleWaiting() {
 
         // Retry for once if the status is unknown
         if (curStatus == ChargerManager::UNKNOWN) {
-            usleep(500000);
+            usleep(1000000);
             curStatus = chargerManager.getChargerStatus(i);
 
             if (curStatus == ChargerManager::UNKNOWN) {
@@ -167,11 +168,11 @@ int Control::scheduleWaiting() {
 
             // Remove the device that is either unchargeable or not scheduled
             if (!unchargeable.erase(removedDevice)) {
-                if (toSchedule.find(removedDevice) == toSchedule.end()) {
-                    ERROR_("Unchargeable map or to schedule panic");
+                if (toSchedule.find(removedDevice) != toSchedule.end()) {
+                    toSchedule.erase(removedDevice);
+//                    ERROR_("Unchargeable map or to schedule panic");
                 }
 
-                toSchedule.erase(removedDevice);
 
             }
         }
@@ -316,7 +317,7 @@ int Control::scheduleMoving1() {
         auto curStatus = chargerManager.getChargerStatus(c.first);
         // Retry for once if the status is unknown
         if (curStatus == ChargerManager::UNKNOWN) {
-            usleep(500000);
+            usleep(1000000);
             curStatus = chargerManager.getChargerStatus(c.first);
 
             if (curStatus == ChargerManager::UNKNOWN) {

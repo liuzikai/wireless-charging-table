@@ -6,9 +6,9 @@ using namespace std;
 using namespace cv;
 #define CAMERA 1
 
-bool visionNeedsHandling;
-vector<cv::Point> newDevices;
-vector<cv::Point> removedDevices;
+//extern bool visionNeedsHandling;
+//extern vector<cv::Point> newDevices;
+//extern vector<cv::Point> removedDevices;
 
 // SharedParameters sharedParams;
 // Camera::ParameterSet cameraParams;
@@ -79,23 +79,32 @@ int main(int argc, char **argv) {
         vector<cv::Point> deleted;
 
         devices_manager_interface.updateLocationMapping(image_locations, inserted, deleted);
-        cout<<"inserted positions"<<endl;
-        for(auto& point:inserted){
 
-            cout << "(" << point.x << "," << point.y << ")" << endl;
-        }
-        cout<<"removed positions"<<endl;
-        for(auto& point:deleted){
-
-            cout << "(" << point.x << "," << point.y << ")" << endl;
-        }
         vector<cv::Point> inserted_real=devices_manager_interface.getRealLocation(inserted,sharedParams.imageWidth,sharedParams.imageHeight);
-        vector<cv::Point> deleteed_real=devices_manager_interface.getRealLocation(deleted,sharedParams.imageWidth,sharedParams.imageHeight);
-        if (!visionNeedsHandling && (inserted.size() || deleted.size())){
-            newDevices = inserted;
-            removedDevices = deleted;
-            visionNeedsHandling = true;
-        }
+        vector<cv::Point> deleted_real=devices_manager_interface.getRealLocation(deleted,sharedParams.imageWidth,sharedParams.imageHeight);
+       if (inserted.size()!=0){
+           cout<<"inserted positions"<<endl;
+           for(auto& point:inserted){
+               cout <<" position in image "<<"(" << point.x << "," << point.y << ")" << endl;
+           }
+           for(auto& point:inserted_real){
+               cout <<" real position in the table "<<"(" << point.x << "," << point.y << ")" << endl;
+           }
+       }
+       if (deleted.size()!=0) {
+           cout << "removed positions" << endl;
+           for (auto &point:deleted) {
+               cout <<" position in image "<< "(" << point.x << "," << point.y << ")" << endl;
+           }
+           for(auto& point:deleted_real){
+               cout <<" real position in the table "<<"(" << point.x << "," << point.y << ")" << endl;
+           }
+       }
+//        if (!visionNeedsHandling && (inserted_real.size() || deleted_real.size())){
+//            newDevices = inserted_real;
+//            removedDevices = deleted_real;
+//            visionNeedsHandling = true;
+//        }
 
    }
 #endif

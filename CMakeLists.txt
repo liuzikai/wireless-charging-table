@@ -26,6 +26,7 @@ add_executable(QiTable
         src/Camera.cpp
         src/DeviceManager.cpp
         src/ChargerManager.cpp
+        src/GrabberController.cpp
         src/main.cpp)
 
 add_executable(VisionUnitTest

@@ -2,10 +2,10 @@
 #include "Common.h"
 #include <iostream>
 
-#define TABLE_WIDTH 500
-#define TABLE_HEIGHT 500
-#define ERROR_MARGIN 20
-#define MAX_THRESHOLD 10
+#define TABLE_WIDTH 350
+#define TABLE_HEIGHT 300
+#define ERROR_MARGIN 15
+#define MAX_THRESHOLD 50
 using namespace std;
 
 void DeviceManager::updateLocationMapping(const vector<cv::Point> &locations, vector<cv::Point> &inserted,
@@ -131,8 +131,8 @@ vector<cv::Point> DeviceManager::getRealLocation(const vector<cv::Point> &locati
 
     vector<cv::Point> realLocations;
     for (const auto &point: locations) {
-        int real_x = TABLE_WIDTH * (point.x / imageWidth);
-        int real_y = TABLE_HEIGHT * (point.y / imageHeight);
+        int real_x = TABLE_WIDTH * (point.x / (float) imageWidth);
+        int real_y = TABLE_HEIGHT * (point.y / (float) imageHeight);
         realLocations.emplace_back(cv::Point{real_x, real_y});
     }
     return realLocations;
