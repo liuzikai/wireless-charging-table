@@ -24,6 +24,8 @@ public:
 
     // ~Control();
 
+    bool controlMoving() {curState == MOVING1 || curState == MOVING2};
+
 private:
 
     enum State {
@@ -34,37 +36,45 @@ private:
 
     int launch();  // thread body, never returns
 
-    struct PointLess {
-        bool operator()(cv::Point const &a, cv::Point const &b) const {
-            if (a.x == b.x) return a.y < b.y;
-            else return a.x < b.x;
+    struct RotatedRectLess {
+        bool operator()(cv::RotatedRect const &a, cv::RotatedRect const &b) const {
+            if (a.center.x == b.center.x) return a.center.y < b.center.y;
+            else return a.center.x < b.center.x;
         }
     };
 
-    struct PointHash {
-        size_t operator()(cv::Point const &a) const {
-            return a.x * 500 + a.y;  // random choice
+    struct RotatedRectHash {
+        size_t operator()(cv::RotatedRect const &a) const {
+            return a.center.x * 500 + a.center.y;  // random choice
         }
     };
 
-    // For the using of unordered_map on cv::Point
-    struct PointEqual {
-        bool operator()(cv::Point const &a, cv::Point const &b) const {
-            return (a.x == b.x) && (a.y == b.y);
+    // For the using of unordered_map on cv::RotatedRect TODO: stricter?
+    struct RotatedRectEqual {
+        bool operator()(cv::RotatedRect const &a, cv::RotatedRect const &b) const {
+            return (a.center.x == b.center.x) && (a.center.y == b.center.y);
         }
     };
 
-    struct PointUnequal {
-        bool operator()(cv::Point const &a, cv::Point const &b) const {
-            return (a.x != b.x) || (a.y != b.y);
+    struct RotatedRectUnequal {
+        bool operator()(cv::RotatedRect const &a, cv::RotatedRect const &b) const {
+            return (a.center.x != b.center.x) || (a.center.y != b.center.y);
         }
     };
+
+    bool operator!=(cv::Point const &a, cv::Point const &b) const {
+        return (a.x != b.x) || (a.y != b.y);
+    }
+
+    bool operator==(cv::Point const &a, cv::Point const &b) const {
+        return (a.x == b.x) && (a.y == b.y);
+    }
 
     struct Device {
-        Device(cv::Point coor) : coor(coor) {}
+        Device(cv::RotatedRect coor) : coor(coor) {}
 
 
-        cv::Point coor;
+        cv::RotatedRect coor;
 
         // The x, y dimention length of the device
         // int x_length;
@@ -104,14 +114,15 @@ private:
     std::string errorMessage;
 
     // Device status
-    std::unordered_map<cv::Point, Device, PointHash, PointEqual> chargeable;
-    std::unordered_map<cv::Point, Device, PointHash, PointEqual> unchargeable;
+    std::unordered_map<cv::RotatedRect, Device, RotatedRectHash, RotatedRectEqual> chargeable;
+    std::unordered_map<cv::RotatedRect, Device, RotatedRectHash, RotatedRectEqual> unchargeable;
 
-    std::set<cv::Point, PointLess> toSchedule;
+    std::set<cv::RotatedRect, RotatedRectLess> toSchedule;
 
-    std::set<cv::Point, PointLess> schedulingNew;  // the new devices in scheduling
-    std::set<cv::Point, PointLess> schedulingOld;  // the old devices rescheduling (coil change)
-    std::queue<std::pair<int, cv::Point> > movingCommands;  // (coil index, target)
+    std::set<cv::RotatedRect, RotatedRectLess> schedulingNew;  // the new devices in scheduling
+    std::set<cv::RotatedRect, RotatedRectLess> schedulingOld;  // the old devices rescheduling (coil change)
+    std::queue<std::pair<int, cv::RotatedRect> > movingCommands;  // (coil index, target)
+    std::queue<std::pair<int, cv::Point> > movingIdleCommands; // (coil index, target) for moving idle coils to initial position
 
     cv::Point initialPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0)};
     cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0)};

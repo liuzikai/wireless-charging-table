@@ -27,8 +27,8 @@ using namespace std;
 
 
 extern bool visionNeedsHandling;
-extern vector<cv::Point> newDevices;
-extern vector<cv::Point> removedDevices;
+extern vector<cv::RotatedRect> newDevices;
+extern vector<cv::RotatedRect> removedDevices;
 
 
 // static pthread_mutex_t pin_locks[ChargerManager::CHARGER_COUNT]; 
@@ -82,8 +82,8 @@ int Control::launch() {
 int Control::scheduleWaiting() {
 
     bool needMoving = false;
-    set<cv::Point, PointLess> toIgnore; // filled when new status is CHARGING
-    set<cv::Point, PointLess> toConfirm; // filled when new status is NOT_CHARGING
+    set<cv::RotatedRect, RotatedRectLess> toIgnore; // filled when new status is CHARGING
+    set<cv::RotatedRect, RotatedRectLess> toConfirm; // filled when new status is NOT_CHARGING
 
     // Pull for the wireless charging status
     for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++) {
@@ -143,8 +143,8 @@ int Control::scheduleWaiting() {
     if (visionNeedsHandling) {
         for (const auto &newDevice : newDevices) {
             // Check whether this new device should be ignored
-            if (toIgnore.find(newDevice) != toIgnore.end()) {
-                toIgnore.erase(newDevice);
+            if (toIgnore.find(newDevice.center) != toIgnore.end()) {
+                toIgnore.erase(newDevice.center);
                 continue;
             }
 
@@ -159,9 +159,9 @@ int Control::scheduleWaiting() {
                 toConfirm.erase(removedDevice);
 
                 // The device was charging but taken away
-                if (!chargeable.erase(removedDevice)) {
-                    ERROR_("Chargeable map panic");
-                }
+                // if (!chargeable.erase(removedDevice)) {
+                //     ERROR_("Chargeable map panic");
+                // }
 
                 continue;
             }
@@ -215,7 +215,7 @@ int Control::scheduleCalculating() {
 
     // Schedule the charging of devices if there are any
     // Collect ChargerManager::CHARGER_COUNT devices and reschedule all of them
-    set<cv::Point, PointLess> curSchedule;
+    set<cv::RotatedRect, RotatedRectLess> curSchedule;
     int availableCoils = idleCoilCount;
     while (toSchedule.size() > 0 && availableCoils > 0) {
         auto curDevice = *toSchedule.begin();
@@ -226,7 +226,7 @@ int Control::scheduleCalculating() {
     }
 
     // New device to schedule
-    unordered_map<int, cv::Point> coilTarget;
+    unordered_map<int, cv::RotatedRect> coilTarget;
     if (curSchedule.size() > 0) {
 
         // Collect currently charging devices into the scheduling
@@ -242,21 +242,21 @@ int Control::scheduleCalculating() {
         for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++) {
 
             // Didn't use map here since the distance may be the same for different devices
-            vector<pair<double, cv::Point> > distance;
+            vector<pair<double, cv::RotatedRect> > distance;
 
             // Collect the distances
             for (const auto &device : curSchedule) {
-                distance.push_back(make_pair(cv::norm(initialPositions[i] - device), device));
+                distance.push_back(make_pair(cv::norm(initialPositions[i] - device.center), device));
             }
 
             // Sort the distances
             sort(distance.begin(), distance.end(),
-                 [](const pair<double, cv::Point> &a, const pair<double, cv::Point> &b) -> bool {
+                 [](const pair<double, cv::RotatedRect> &a, const pair<double, cv::RotatedRect> &b) -> bool {
                      return a.first < b.first;
                  });
 
             // Add the device with the smallest distance to be the target
-            cv::Point curTarget = distance[0].second;
+            cv::RotatedRect curTarget = distance[0].second;
             curSchedule.erase(curTarget);
             if (curTarget != curCoilPositions[i]) coilTarget.insert(make_pair(i, curTarget));
 
@@ -284,7 +284,7 @@ int Control::scheduleCalculating() {
             coilTarget.find(i) == coilTarget.end() &&
             curCoilPositions[i] != initialPositions[i]) {
 
-            movingCommands.push(make_pair(i, initialPositions[i]));
+            movingIdleCommands.push(make_pair(i, initialPositions[i]));
 
         }
     }
@@ -300,30 +300,82 @@ int Control::scheduleMoving1() {
 
     bool needMoving = false; // for moving the idle coils to initial position
 
+    // Move the idle coils to initial first
+    while (!movingIdleCommands.empty()){
+        auto c = movingIdleCommands.front();
+        movingIdleCommands.pop();
+        auto &coil = curCoilPositions[c.first];
+        grabberController.moveGrabber(coil.x, coil.y, true);
+        grabberController.moveGrabber(c.second.x, c.second.y);
+        grabberController.resetGrabber();
+        sleep(5); // TODO: garenttee to finish! 
+    }
+
     // Send the moving commands
     while (!movingCommands.empty()) {
 
         // Issue the command
         auto c = movingCommands.front();
         movingCommands.pop();
+        auto &curDevice = c.second;
         auto &coil = curCoilPositions[c.first];
-        grabberController.issueGrabberMovement(coil.x, coil.y, c.second.x, c.second.y);
+
+        grabberController.moveGrabber(coil.x, coil.y, true);
+        grabberController.moveGrabber(curDevice.center.x, curDevice.center.y);
 
         // Wait until complete and check the final wireless charging status
-        sleep(5); // TODO: garenttee to finish!
+        sleep(5); // TODO: guarantee to finish! 
 
         // Update the status according to wireless read
 
         auto curStatus = chargerManager.getChargerStatus(c.first);
-        // Retry for once if the status is unknown
-        if (curStatus == ChargerManager::UNKNOWN) {
-            usleep(1000000);
-            curStatus = chargerManager.getChargerStatus(c.first);
 
-            if (curStatus == ChargerManager::UNKNOWN) {
-                ERROR_("Pull charging status failed");
+        // Explore 3@width x 5@height
+
+        // The offset for each explore
+        int exploreHeight[2] = [ // (x, y)
+            curDevice.size.height * cos(curDevice.angle), 
+            curDevice.size.height * sin(curDevice.angle)
+        ];
+        int exploreWidth[2] = [ // (x, y)
+            curDevice.size.width * cos(90-curDevice.angle), 
+            curDevice.size.width * sin(90-curDevice.angle)
+        ];
+
+        int explorePath[3][5] = { // (width offset, height offset)
+            {{0, -2}, {0, -1}, {0, 0}, {0, 1}, {0, 2}},
+            {{-1, -2}, {-1, -1}, {-1, 0}, {-1, 1}, {-1, 2}},
+            {{1, -2}, {1, -1}, {1, 0}, {1, 1}, {1, 2}}
+        };
+
+        int finalX = 0;
+        int finalY = 0;
+        for (int i = 0; i < 3; i++){
+            for (int j = 0; j < 5; j++){
+                finalX = curDevice.center.x + explorePath[i][j][0] * exploreWidth[0] + explorePath[i][j][1] * exploreHeight[0];
+                finalY = curDevice.center.y + explorePath[i][j][0] * exploreWidth[1] + explorePath[i][j][1] * exploreHeight[1];
+                
+                grabberController.moveGrabber(finalX, finalY);
+                
+                sleep(1); // guarantee to finish
+                curStatus = chargerManager.getChargerStatus(c.first);
+                if (curState == ChargerManager::CHARGING) break;
             }
+            if (curState == ChargerManager::CHARGING) break;
         }
+
+            
+        grabberController.resetGrabber();
+
+        // // Retry for once if the status is unknown
+        // if (curStatus == ChargerManager::UNKNOWN) {
+        //     usleep(1000000);
+        //     curStatus = chargerManager.getChargerStatus(c.first);
+
+        //     if (curStatus == ChargerManager::UNKNOWN) {
+        //         ERROR_("Pull charging status failed");
+        //     }
+        // }
 
         // 4 cases for wireless coil status change {Charging, Not charging} -> {Charging, Not charging}
         // According to the notes, they can be merged. Only the final status matter
@@ -334,7 +386,7 @@ int Control::scheduleMoving1() {
 
             // Add the device if it is a new chargebale device
             if (chargeable.find(c.second) == chargeable.end()) {
-                chargeable.insert(make_pair(c.second, Device(c.second)));
+                chargeable.insert(make_pair(c.second, Device(c.second))); // TODO:
             }
 
             if (unchargeable.find(c.second) != unchargeable.end()) {
@@ -357,7 +409,7 @@ int Control::scheduleMoving1() {
         }
 
         oldStatus[c.first] = curStatus;
-        curCoilPositions[c.first] = c.second;
+        curCoilPositions[c.first] = cv::Point(finalX, finalY);
 
     }
 
