@@ -13,52 +13,14 @@
 #include "GrabberController.h"
 #include "Vision.h"
 
-// For the using of unorder_map on cv::Point
-bool operator==(cv::Point const& a, cv::Point const& b){
-    return (a.x == b.x) && (a.y == b.y);
-}
-
-bool operator!=(cv::Point const& a, cv::Point const& b){
-    return (a.x != b.x) || (a.y != b.y);
-}
-
-struct PointLess {
-    bool operator()(cv::Point const& a, cv::Point const& b){
-        if (a.x == b.x) return a.y < b.y;
-        else return a.x < b.x;
-    }
-};
-
-
-class MyHash{
-public:
-    size_t operator()(cv::Point const& a) const {
-        return a.x * 500 + a.y; // random choice
-    }
-};
-
-struct Device{
-    Device(cv::Point coor) : coor(coor) {}
-    
-    
-    cv::Point coor;
-
-    // The x, y dimention length of the device
-    // int x_length;
-    // int y_length;
-
-    bool chargable;
-};
-
-
 class Control {
-
 public:
+
     Control();
 
     // ~Control();
 
-    enum State{
+    enum State {
         WAITING, CALCULATING, MOVING1, MOVING2, ERROR, NUM_STATES
     };
 
@@ -72,7 +34,48 @@ public:
 
 
 private:
-    /********************************* Schduling Controls *****************************/
+
+    struct PointLess {
+        bool operator()(cv::Point const &a, cv::Point const &b) const {
+            if (a.x == b.x) return a.y < b.y;
+            else return a.x < b.x;
+        }
+    };
+
+    struct PointHash {
+        size_t operator()(cv::Point const &a) const {
+            return a.x * 500 + a.y;  // random choice
+        }
+    };
+
+    // For the using of unordered_map on cv::Point
+    struct PointEqual {
+        bool operator()(cv::Point const &a, cv::Point const &b) const {
+            return (a.x == b.x) && (a.y == b.y);
+        }
+    };
+
+    struct PointUnequal {
+        bool operator()(cv::Point const &a, cv::Point const &b) const {
+            return (a.x != b.x) || (a.y != b.y);
+        }
+    };
+
+    struct Device {
+        Device(cv::Point coor) : coor(coor) {}
+
+
+        cv::Point coor;
+
+        // The x, y dimention length of the device
+        // int x_length;
+        // int y_length;
+
+        bool chargable;
+    };
+
+    /********************************* Scheduling Controls *****************************/
+
     ScheduleFunction schedule[NUM_STATES];
 
     /**
@@ -80,37 +83,41 @@ private:
      * See the document for the work of each state
      */
     int scheduleWaiting();
+
     int scheduleCalculating();
+
     int scheduleMoving1();
+
     int scheduleMoving2();
+
     int scheduleError();
 
-    
+
     ChargerManager chargerManager;
     GrabberController grabberController;
 
     /********************************* Data Fields *****************************/
+
     State curState;
-    
+
     std::string errorMessage;
 
     // Device status
-    std::unordered_map<cv::Point, Device, MyHash> chargeable;
-    std::unordered_map<cv::Point, Device, MyHash> unchargeable;
-    
+    std::unordered_map<cv::Point, Device, PointHash, PointEqual> chargeable;
+    std::unordered_map<cv::Point, Device, PointHash, PointEqual> unchargeable;
+
     std::set<cv::Point, PointLess> toSchedule;
 
-    std::set<cv::Point, PointLess> schedulingNew; // The new devices in scheduling
-    std::set<cv::Point, PointLess> schedulingOld; // The old devices rescheduling (coil change)
-    std::queue<std::pair<int, cv::Point> > movingCommands; // (coil index, target)
+    std::set<cv::Point, PointLess> schedulingNew;  // the new devices in scheduling
+    std::set<cv::Point, PointLess> schedulingOld;  // the old devices rescheduling (coil change)
+    std::queue<std::pair<int, cv::Point> > movingCommands;  // (coil index, target)
 
-    cv::Point initialPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0,0)};
-    cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0,0)};
+    cv::Point initialPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0)};
+    cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0)};
 
-    // For Wireless Charging Subsystem
+    // For wireless charging subsystem
     int idleCoilCount;
-    ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT]
-         = {ChargerManager::NOT_CHARGING};
+    ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT] = {ChargerManager::NOT_CHARGING};
 
 
 };
