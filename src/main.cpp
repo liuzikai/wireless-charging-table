@@ -41,6 +41,7 @@ int main(int argc, char** argv){
     Vision my_vision;
     for (;;) {
         Mat frame;
+        Mat frameCalibration;
         // wait for a new frame from camera and store it into 'frame'
         cap.read(frame);  // or: cap >> frame;
         // check if we succeeded
@@ -48,7 +49,7 @@ int main(int argc, char** argv){
             cerr << "ERROR! blank frame grabbed\n";
             break;
         }
-
+        image_locations = my_vision.processing(frameCalibration);
         vector<Point> image_locations;
         //        cout<<"before launch test"<<endl;
         image_locations = my_vision.processing(frame);

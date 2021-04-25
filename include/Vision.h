@@ -31,7 +31,7 @@ extern Camera::ParameterSet cameraParams;
 
 class Vision {
 public:
-    std::vector<cv::Point> processing(cv::Mat &frame);
+    std::vector<cv::RotatedRect> processing(cv::Mat &frame);
 
     void drawRotatedRect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &boarderColor);
 
@@ -44,6 +44,7 @@ public:
 
     std::vector<std::vector<cv::Point>> find_draw_contours(const cv::Mat &image_BrightnessThreshold, cv::Mat &drawing);
 
+    void image_calibration(cv::Mat& frame, cv::Mat& frameCalibration);
     // member variable 
     int blur_kernel_size_ = 9;
     int min_contour_area_ = 2500;

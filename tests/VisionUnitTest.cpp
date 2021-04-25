@@ -45,8 +45,10 @@ int main(int argc, char **argv) {
 //    cout<<"before entering for loop"<<endl;
    DeviceManager devices_manager_interface;
    Vision my_vision;
+
    for (;;) {
        Mat frame;
+       Mat frameCalibration;
        // wait for a new frame from camera and store it into 'frame'
        cap.read(frame);  // or: cap >> frame;
        // check if we succeeded
@@ -54,7 +56,7 @@ int main(int argc, char **argv) {
            cerr << "ERROR! blank frame grabbed\n";
            break;
        }
-
+//        my_vision.image_calibration(frame, frameCalibration);
 #if SHOW_ORIG_IMAGE
        // show live and wait for a key with timeout long enough to show images
        imshow("Live", frame);
@@ -68,38 +70,38 @@ int main(int argc, char **argv) {
        // break;
        // call a function to process the image, passing by reference
 
-        vector<Point> image_locations;
+        vector<RotatedRect> image_RotatedRect;
     //        cout<<"before launch test"<<endl;
-        image_locations = my_vision.processing(frame);
+        image_RotatedRect = my_vision.processing(frame);
         // cout<<"detected positions"<<endl;
         // for (auto &point: image_locations) {
         //     cout << "(" << point.x << "," << point.y << ")" << endl;
         // }
-        vector<cv::Point> inserted;
-        vector<cv::Point> deleted;
-
-        devices_manager_interface.updateLocationMapping(image_locations, inserted, deleted);
-
-        vector<cv::Point> inserted_real=devices_manager_interface.getRealLocation(inserted,sharedParams.imageWidth,sharedParams.imageHeight);
-        vector<cv::Point> deleted_real=devices_manager_interface.getRealLocation(deleted,sharedParams.imageWidth,sharedParams.imageHeight);
-       if (inserted.size()!=0){
-           cout<<"inserted positions"<<endl;
-           for(auto& point:inserted){
-               cout <<" position in image "<<"(" << point.x << "," << point.y << ")" << endl;
-           }
-           for(auto& point:inserted_real){
-               cout <<" real position in the table "<<"(" << point.x << "," << point.y << ")" << endl;
-           }
-       }
-       if (deleted.size()!=0) {
-           cout << "removed positions" << endl;
-           for (auto &point:deleted) {
-               cout <<" position in image "<< "(" << point.x << "," << point.y << ")" << endl;
-           }
-           for(auto& point:deleted_real){
-               cout <<" real position in the table "<<"(" << point.x << "," << point.y << ")" << endl;
-           }
-       }
+//        vector<cv::RotatedRect> inserted;
+//        vector<cv::RotatedRect> deleted;
+//
+//        devices_manager_interface.updateLocationMapping(image_locations, inserted, deleted);
+//
+//        vector<cv::Point> inserted_real=devices_manager_interface.getRealLocation(inserted,sharedParams.imageWidth,sharedParams.imageHeight);
+//        vector<cv::Point> deleted_real=devices_manager_interface.getRealLocation(deleted,sharedParams.imageWidth,sharedParams.imageHeight);
+//       if (inserted.size()!=0){
+//           cout<<"inserted positions"<<endl;
+//           for(auto& point:inserted){
+//               cout <<" position in image "<<"(" << point.x << "," << point.y << ")" << endl;
+//           }
+//           for(auto& point:inserted_real){
+//               cout <<" real position in the table "<<"(" << point.x << "," << point.y << ")" << endl;
+//           }
+//       }
+//       if (deleted.size()!=0) {
+//           cout << "removed positions" << endl;
+//           for (auto &point:deleted) {
+//               cout <<" position in image "<< "(" << point.x << "," << point.y << ")" << endl;
+//           }
+//           for(auto& point:deleted_real){
+//               cout <<" real position in the table "<<"(" << point.x << "," << point.y << ")" << endl;
+//           }
+//       }
 //        if (!visionNeedsHandling && (inserted_real.size() || deleted_real.size())){
 //            newDevices = inserted_real;
 //            removedDevices = deleted_real;

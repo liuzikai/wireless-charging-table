@@ -1,5 +1,6 @@
 #include "Vision.h"
 
+#include <opencv2/opencv.hpp>
 
 #define GPU 0
 
@@ -42,8 +43,31 @@ RNG rng(12345);
 // https://docs.opencv.org/master/d6/d55/tutorial_table_of_content_calib3d.html
 // https://docs.opencv.org/master/d4/d94/tutorial_camera_calibration.html
 
+void Vision::image_calibration(Mat& frame, Mat& frameCalibration){
+    Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+    cameraMatrix.at<double>(0, 0) = 342.3936;
+    cameraMatrix.at<double>(0, 1) = -0.0265;
+    cameraMatrix.at<double>(0, 2) = 320.3885;
+    cameraMatrix.at<double>(1, 1) = 342.2803;
+    cameraMatrix.at<double>(1, 2) = 174.8987;
 
-vector<Point> Vision::processing(Mat &frame) {
+    Mat distCoeffs = Mat::zeros(5, 1, CV_64F);
+    distCoeffs.at<double>(0, 0) = 0.0396;
+    distCoeffs.at<double>(1, 0) = -0.0614;
+    distCoeffs.at<double>(2, 0) = 0.0008;
+    distCoeffs.at<double>(3, 0) = -0.0012;
+    distCoeffs.at<double>(4, 0) = 0;
+
+    Mat view, map1, map2;
+    Size imageSize;
+    imageSize = frame.size();
+    initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
+                            cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
+                            imageSize, CV_16SC2, map1, map2);
+    remap(frame, frameCalibration, map1, map2, INTER_LINEAR);
+}
+
+vector<RotatedRect> Vision::processing(Mat &frame) {
     // good source of image processing 
     // https://docs.opencv.org/3.4/d2/d96/tutorial_py_table_of_contents_imgproc.html
 //    imwrite("test.jpg", frame);
@@ -141,7 +165,7 @@ vector<Point> Vision::processing(Mat &frame) {
         locations.emplace_back(Point(rect.center.x, rect.center.y));
     }
 
-    return locations;
+    return BoundingBox;
 }
 
 void Vision::draw_bounding_box(vector<RotatedRect> &BoundingBox, Mat &drawing, Mat &frame) {
