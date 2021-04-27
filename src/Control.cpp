@@ -303,18 +303,30 @@ int Control::scheduleMoving1() {
         auto curStatus = chargerManager->getChargerStatus(c.first);
 
         // Explore 3@width x 5@height
+        float longEdge, shortEdge,
+        float angle;  // angle from X to shortEdge
+        if (curDevice.size.width < curDevice.size.height) {
+            shortEdge = curDevice.size.width;
+            longEdge = curDevice.size.height;
+            angle = curDevice.angle;
+        } else {
+            shortEdge = curDevice.size.height;
+            longEdge = curDevice.size.width;
+            angle = curDevice.angle + 90;
+        }
 
         // The offset for each explore
-        float exploreHeight[2] = { // (x, y)
-                static_cast<float>(curDevice.size.height * cos(curDevice.angle * M_PI / 180.0f)),
-                static_cast<float>(curDevice.size.height * sin(curDevice.angle * M_PI / 180.0f))
+        float shortEdgeStep[2] = { // (x, y)j
+                static_cast<float>(shortEdge * cos(angle * M_PI / 180.0f) / 6),
+                static_cast<float>(shortEdge * sin(angle * M_PI / 180.0f) / 6)
         };
-        float exploreWidth[2] = { // (x, y)j
-                static_cast<float>(curDevice.size.width * cos(90 - curDevice.angle * M_PI / 180.0f)),
-                static_cast<float>(curDevice.size.width * sin(90 - curDevice.angle * M_PI / 180.0f))
+        float longEdgeStep[2] = { // (x, y)
+                static_cast<float>(longEdge * cos((90 - angle) * M_PI / 180.0f) / 10),
+                static_cast<float>(longEdge * sin((90 - angle) * M_PI / 180.0f) / 10)
         };
 
-        float explorePath[][2] = {  // (width offset, height offset)
+
+        float explorePath[][2] = {  // (shortEdge offset, longEdge offset)
                 {0,  -2}, {0,  -1}, {0,  0}, {0,  1}, {0,  2},
                 {-1, -2}, {-1, -1}, {-1, 0}, {-1, 1}, {-1, 2},
                 {1,  -2}, {1,  -1}, {1,  0}, {1,  1}, {1,  2}
@@ -323,8 +335,8 @@ int Control::scheduleMoving1() {
         float finalX = 0;
         float finalY = 0;
         for (const auto &offset : explorePath) {
-            finalX = curDevice.center.x + offset[0] * exploreWidth[0] / 3 + offset[1] * exploreHeight[0] / 5;
-            finalY = curDevice.center.y + offset[0] * exploreWidth[1] / 3 + offset[1] * exploreHeight[1] / 5;
+            finalX = curDevice.center.x + offset[0] * shortEdgeStep[0] + offset[1] * longEdgeStep[0];
+            finalY = curDevice.center.y + offset[0] * shortEdgeStep[1] + offset[1] * longEdgeStep[1];
             grabberController->moveGrabber(finalX, finalY);
 
             sleep(3); // TODO: guarantee to finish
