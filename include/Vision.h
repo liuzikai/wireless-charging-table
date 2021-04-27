@@ -31,11 +31,11 @@ private:
 
     cv::VideoCapture cap;
 
-    static constexpr int CAMERA_FRAME_WIDTH = 720;
-    static constexpr int CAMERA_FRAME_HEIGHT = 1280;
+    static constexpr int CAMERA_FRAME_WIDTH = 1280;
+    static constexpr int CAMERA_FRAME_HEIGHT = 720;
 
-    static constexpr int TABLE_WIDTH = 300;
-    static constexpr int TABLE_HEIGHT = 360;
+    static constexpr int TABLE_WIDTH = 360;
+    static constexpr int TABLE_HEIGHT = 260;
 
     // -------------------------------- Image processing --------------------------------
 
@@ -57,7 +57,7 @@ private:
 
     // member variable 
     int blur_kernel_size_ = 9;
-    int min_contour_area_ = 2500;
+    int min_contour_area_ = 25000;
     int max_contour_area_ = 10000000;
     // extend is the ratio between the contour area and the bounding box area
     float extend_threshold_ = 0.75;
@@ -104,7 +104,7 @@ private:
     static constexpr float INTERSECTION_AREA_THRESHOLD = 0.9;
     static constexpr float AREA_RATIO_THRESHOLD = 0.9;
     static constexpr float ROTATED_RECT_UPDATE_RATE = 0.5;
-    static constexpr int COUNTER_THRESHOLD = 50;
+    static constexpr int COUNTER_THRESHOLD = 30;
 
     cv::RotatedRect combineRect(const cv::RotatedRect &cur, const cv::RotatedRect &ref);
 

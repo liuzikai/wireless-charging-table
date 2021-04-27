@@ -9,6 +9,7 @@ int main(int argc, char **argv) {
 
 #if CAMERA
     vision = std::make_unique<Vision>();
+    while (1);
 #endif
 
 #if !CAMERA

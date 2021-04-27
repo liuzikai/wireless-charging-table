@@ -324,10 +324,10 @@ int Control::scheduleMoving1() {
         float finalY = 0;
         for (const auto &offset : explorePath) {
             finalX = curDevice.center.x + offset[0] * exploreWidth[0] / 3 + offset[1] * exploreHeight[0] / 5;
-            finalY = curDevice.center.y + offset[0] * exploreWidth[1] / 5 + offset[1] * exploreHeight[1] / 5;
+            finalY = curDevice.center.y + offset[0] * exploreWidth[1] / 3 + offset[1] * exploreHeight[1] / 5;
             grabberController->moveGrabber(finalX, finalY);
 
-            sleep(1); // TODO: guarantee to finish
+            sleep(3); // TODO: guarantee to finish
 
             curStatus = chargerManager->getChargerStatus(c.first);
             if (curStatus == ChargerManager::CHARGING) break;

@@ -50,7 +50,7 @@ void Vision::runVisionThread() {
     std::cout << "Camera: " << cap.get(CAP_PROP_FRAME_WIDTH) << "x" << cap.get(CAP_PROP_FRAME_HEIGHT)
               << " @ " << cap.get(cv::CAP_PROP_FPS) << " fps" << std::endl;
 
-    // Check if We succeeded
+    // Check if we succeeded
     if (!cap.isOpened()) {
         std::cerr << "Camera: ERROR! Unable to open camera!" << std::endl;
         return;
@@ -210,7 +210,7 @@ vector<RotatedRect> Vision::process(Mat &frame) {
     // draw the bounding box
 #if SHOW_ANNOTED_IMAGE
     imshow("annoted", frame);
-//    waitKey(5);
+    waitKey(5);
 #endif
     // locate possible bounding box for the phone/airpods
     // the bounding box has been filtered
@@ -411,17 +411,18 @@ void Vision::fetchDeviceDiff(vector<cv::RotatedRect> &newDevices, vector<cv::Rot
         Device &device = it->second;
         bool shouldDelete = false;
 
+        const RotatedRect &realRect = getRealRect(device.rect);
         if (!device.reported && device.counter == COUNTER_THRESHOLD) {
             // A device newly reached COUNTER_THRESHOLD
-            std::cout << "Vision: report inserted " << "(" << device.rect.center.x << "," << device.rect.center.y << ")"
+            std::cout << "Vision: report inserted " << "(" << realRect.center.x << "," << realRect.center.y << ")"
                       << std::endl;
-            newDevices.emplace_back(getRealRect(device.rect));
+            newDevices.emplace_back(realRect);
             device.reported = true;
         } else if (device.reported && device.counter == 0) {
             // A device reported but no longer exist
-            std::cout << "Vision: report deleted " << "(" << device.rect.center.x << "," << device.rect.center.y << ")"
+            std::cout << "Vision: report deleted " << "(" << realRect.center.x << "," << realRect.center.y << ")"
                       << std::endl;
-            deletedDevices.emplace_back(getRealRect(device.rect));
+            deletedDevices.emplace_back(realRect);
             shouldDelete = true;
         }
 
@@ -441,8 +442,10 @@ cv::RotatedRect Vision::getRealRect(cv::RotatedRect& old_rect) {
     // We assume the upper left corner of the image is the (0,0)
 
     cv::RotatedRect new_rect=old_rect;
-    new_rect.center.x = TABLE_WIDTH * (old_rect.center.x / (float) 640);
-    new_rect.center.y = TABLE_HEIGHT * (old_rect.center.y / (float) 1060);
+    new_rect.center.x = TABLE_WIDTH * (old_rect.center.x / (float) 1060);
+    new_rect.center.y = TABLE_HEIGHT * (old_rect.center.y / (float) 640);
+    new_rect.size.width = TABLE_WIDTH * (old_rect.size.width / (float) 1060);
+    new_rect.size.height = TABLE_HEIGHT * (old_rect.size.height / (float) 640);
     return new_rect;
 }
 
