@@ -18,6 +18,10 @@ public:
 
     void fetchDeviceDiff(vector<cv::RotatedRect> &newDevices, vector<cv::RotatedRect> &deletedDevices);
 
+    std::vector<cv::RotatedRect> process(cv::Mat &frame);
+
+    void imageCalibrate(const cv::Mat& frame, cv::Mat& frameCalibrated);
+
 private:
 
     std::thread *th = nullptr;
@@ -30,9 +34,12 @@ private:
     static constexpr int CAMERA_FRAME_WIDTH = 720;
     static constexpr int CAMERA_FRAME_HEIGHT = 1280;
 
+    static constexpr int TABLE_WIDTH = 300;
+    static constexpr int TABLE_HEIGHT = 360;
+
     // -------------------------------- Image processing --------------------------------
 
-    std::vector<cv::RotatedRect> process(cv::Mat &frame);
+    
 
     void drawRotatedRect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &boarderColor);
 
@@ -45,7 +52,7 @@ private:
 
     std::vector<std::vector<cv::Point>> findAndDrawContours(const cv::Mat &brightnessThreshold, cv::Mat &drawing);
 
-    void imageCalibrate(const cv::Mat& frame, cv::Mat& frameCalibrated);
+    
 
 
     // member variable 
@@ -90,6 +97,8 @@ private:
     bool rectMatched(const cv::RotatedRect &cur, const cv::RotatedRect &ref);
 
     bool pointClose(const cv::Point &cur, const cv::Point &ref);
+
+    cv::RotatedRect getRealRect(cv::RotatedRect& old_rect);
 
     static constexpr int COORDINATE_OFFSET_THRESHOLD = 15;
     static constexpr float INTERSECTION_AREA_THRESHOLD = 0.9;

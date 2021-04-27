@@ -364,19 +364,6 @@ void Vision::drawRotatedRect(Mat &img, const RotatedRect &rect, const Scalar &bo
 // for (size_t idx = 0; idx < contours.size(); idx++) {
 //     drawContours(drawing, contours, idx, colors[idx % 3]);
 // }
-// https://www.jetsonhacks.com/nvidia-jetson-nano-j41-header-pinout/
-// https://github.com/jwatte/jetson-gpio-example
-// https://github.com/NVIDIA/jetson-gpio
-// https://forums.developer.nvidia.com/t/jetson-nano-uart-c-c-example/78184
-// https://forums.developer.nvidia.com/t/serial-console-setup-parameters/73073/3
-// https://forums.developer.nvidia.com/t/how-to-use-uart-on-tx2/55392
-// https://forums.developer.nvidia.com/t/jetson-nano-uart-c-c-example/78184/2
-// https://maker.pro/nvidia-jetson/tutorial/how-to-use-gpio-pins-on-jetson-nano-developer-kit
-// https://forums.developer.nvidia.com/t/jetson-nano-gpio-example-problem/75547
-// https://forums.developer.nvidia.com/t/jetson-nano-fast-gpio-c-example-with-direct-register-access/79692/7
-// https://forums.developer.nvidia.com/t/using-gpio-on-nvidia-jetson-tx2/58607
-// https://forums.developer.nvidia.com/t/uart-communication-with-arduino-nano/83810
-
 
 void Vision::updateDevices(const vector<cv::RotatedRect> &boxes) {
 
@@ -447,18 +434,15 @@ void Vision::fetchDeviceDiff(vector<cv::RotatedRect> &newDevices, vector<cv::Rot
 
 // We have a list of suitable candidate bounding box, we want to
 // Identify the suitable one and generate the location of the bounding box
-vector<cv::Point> Vision::getRealRect(const vector<cv::Point> &locations, int imageWidth, int imageHeight) {
+cv::RotatedRect Vision::getRealRect(cv::RotatedRect& old_rect) {
     // Here we assume that the width of image exactly include the width of table
     // The height of the image exactly include the height of table
     // We assume the upper left corner of the image is the (0,0)
 
-    vector<cv::Point> realLocations;
-    for (const auto &point: locations) {
-        int real_x = TABLE_WIDTH * (point.x / (float) imageWidth);
-        int real_y = TABLE_HEIGHT * (point.y / (float) imageHeight);
-        realLocations.emplace_back(cv::Point{real_x, real_y});
-    }
-    return realLocations;
+    cv::RotatedRect new_rect=old_rect;
+    new_rect.center.x = TABLE_WIDTH * (old_rect.center.x / (float) 640);
+    new_rect.center.y = TABLE_HEIGHT * (old_rect.center.y / (float) 1060);
+    return new_rect;
 }
 
 
