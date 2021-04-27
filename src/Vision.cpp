@@ -442,7 +442,7 @@ cv::RotatedRect Vision::getRealRect(cv::RotatedRect& old_rect) {
     // We assume the upper left corner of the image is the (0,0)
 
     cv::RotatedRect new_rect=old_rect;
-    new_rect.center.x = TABLE_WIDTH * (old_rect.center.x / (float) 1060);
+    new_rect.center.x = TABLE_WIDTH * ((old_rect.center.x-40) / (float) 1060);
     new_rect.center.y = TABLE_HEIGHT * (old_rect.center.y / (float) 640);
     new_rect.size.width = TABLE_WIDTH * (old_rect.size.width / (float) 1060);
     new_rect.size.height = TABLE_HEIGHT * (old_rect.size.height / (float) 640);

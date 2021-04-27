@@ -296,53 +296,55 @@ int Control::scheduleMoving1() {
         grabberController->moveGrabber(curDevice.center.x, curDevice.center.y);
 
         // Wait until complete and check the final wireless charging status
-        sleep(5); // TODO: guarantee to finish!
+        sleep(7); // TODO: guarantee to finish!
 
         // Update the status according to wireless read
 
         auto curStatus = chargerManager->getChargerStatus(c.first);
 
         // Explore 3@width x 5@height
-        float longEdge, shortEdge,
+        float longEdge, shortEdge;
         float angle;  // angle from X to shortEdge
         if (curDevice.size.width < curDevice.size.height) {
             shortEdge = curDevice.size.width;
             longEdge = curDevice.size.height;
-            angle = curDevice.angle;
+            angle = curDevice.angle + 90;
         } else {
             shortEdge = curDevice.size.height;
             longEdge = curDevice.size.width;
-            angle = curDevice.angle + 90;
+            angle = curDevice.angle;
         }
 
         // The offset for each explore
         float shortEdgeStep[2] = { // (x, y)j
-                static_cast<float>(shortEdge * cos(angle * M_PI / 180.0f) / 6),
-                static_cast<float>(shortEdge * sin(angle * M_PI / 180.0f) / 6)
+                static_cast<float>(shortEdge * cos(angle * M_PI / 180.0f) / 12),
+                static_cast<float>(shortEdge * sin(angle * M_PI / 180.0f) / 12)
         };
         float longEdgeStep[2] = { // (x, y)
-                static_cast<float>(longEdge * cos((90 - angle) * M_PI / 180.0f) / 10),
-                static_cast<float>(longEdge * sin((90 - angle) * M_PI / 180.0f) / 10)
+                static_cast<float>(longEdge * cos((90 - angle) * M_PI / 180.0f) / 20),
+                static_cast<float>(longEdge * sin((90 - angle) * M_PI / 180.0f) / 20)
         };
 
 
-        float explorePath[][2] = {  // (shortEdge offset, longEdge offset)
-                {0,  -2}, {0,  -1}, {0,  0}, {0,  1}, {0,  2},
-                {-1, -2}, {-1, -1}, {-1, 0}, {-1, 1}, {-1, 2},
-                {1,  -2}, {1,  -1}, {1,  0}, {1,  1}, {1,  2}
-        };
+//        float explorePath[][2] = {  // (shortEdge offset, longEdge offset)
+//                {0,  -2}, {0,  -1}, {0,  0}, {0,  1}, {0,  2},
+//                {-1, -2}, {-1, -1}, {-1, 0}, {-1, 1}, {-1, 2},
+//                {1,  -2}, {1,  -1}, {1,  0}, {1,  1}, {1,  2}
+//        };
 
         float finalX = 0;
         float finalY = 0;
-        for (const auto &offset : explorePath) {
-            finalX = curDevice.center.x + offset[0] * shortEdgeStep[0] + offset[1] * longEdgeStep[0];
-            finalY = curDevice.center.y + offset[0] * shortEdgeStep[1] + offset[1] * longEdgeStep[1];
-            grabberController->moveGrabber(finalX, finalY);
+        for (int i = -2; i <= 2; i++) {
+            for (int j = -5; j <= 5; j++) {
+                curStatus = chargerManager->getChargerStatus(c.first);
+                if (curStatus == ChargerManager::CHARGING) break;
 
-            sleep(3); // TODO: guarantee to finish
+                finalX = curDevice.center.x + i * shortEdgeStep[0] + j * longEdgeStep[0];
+                finalY = curDevice.center.y + i * shortEdgeStep[1] + j * longEdgeStep[1];
+                grabberController->moveGrabber(finalX, finalY);
 
-            curStatus = chargerManager->getChargerStatus(c.first);
-            if (curStatus == ChargerManager::CHARGING) break;
+                sleep(2); // TODO: guarantee to finish
+            }
         }
 
         grabberController->detachGrabber();
@@ -424,6 +426,8 @@ int Control::scheduleMoving1() {
     if (needMoving) {
         curState = CALCULATING;
     } else {
+        grabberController->resetGrabber();
+        sleep(5);
         curState = WAITING;
     }
 

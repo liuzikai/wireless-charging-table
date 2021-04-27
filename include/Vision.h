@@ -34,7 +34,7 @@ private:
     static constexpr int CAMERA_FRAME_WIDTH = 1280;
     static constexpr int CAMERA_FRAME_HEIGHT = 720;
 
-    static constexpr int TABLE_WIDTH = 360;
+    static constexpr int TABLE_WIDTH = 400;
     static constexpr int TABLE_HEIGHT = 260;
 
     // -------------------------------- Image processing --------------------------------
