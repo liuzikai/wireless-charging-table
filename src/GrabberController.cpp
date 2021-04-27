@@ -35,6 +35,10 @@ void GrabberController::moveGrabber(float x, float y, bool fast) {
     issueMoveCommand(fast ? MOVE_SPEED_DETACHED : MOVE_SPEED_ATTACHED, x, y, Z_ATTACHED);
 }
 
+void GrabberController::detachGrabber() {
+    issueMoveCommand(MOVE_SPEED_DETACHED, -1, -1, Z_DETACHED);
+}
+
 void GrabberController::resetGrabber() {
     // Step 1: detach
     issueMoveCommand(MOVE_SPEED_DETACHED, -1, -1, Z_DETACHED);

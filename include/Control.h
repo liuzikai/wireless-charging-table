@@ -26,16 +26,13 @@ public:
 
     explicit Control(Vision *vision, ChargerManager *chargerManager, GrabberController *grabberController);
 
-    void join() { th->join(); }
+    int launch();  // thread body, never returns
 
 private:
 
     Vision *vision;
     ChargerManager *chargerManager;
     GrabberController *grabberController;
-
-    std::thread *th = nullptr;
-    int launch();  // thread body, never returns
 
     enum State {
         WAITING, CALCULATING, MOVING1, MOVING2, ERROR, NUM_STATES
@@ -55,44 +52,11 @@ private:
         }
     };
 
-    struct PointHash {
-        size_t operator()(cv::Point const &a) const {
-            return a.x * 500 + a.y;  // random choice
-        }
-    };
-
-    // For the using of unordered_map on cv::RotatedRect TODO: stricter?
-    struct RotatedRectEqual {
-        bool operator()(cv::RotatedRect const &a, cv::RotatedRect const &b) const {
-            return (a.center.x == b.center.x) && (a.center.y == b.center.y);
-        }
-    };
-
-    struct PointEqual {
-        bool operator()(cv::Point const &a, cv::Point const &b) const {
-            return (a.center.x == b.center.x) && (a.center.y == b.center.y);
-        }
-    };
-
-    struct RotatedRectUnequal {
-        bool operator()(cv::RotatedRect const &a, cv::RotatedRect const &b) const {
-            return (a.center.x != b.center.x) || (a.center.y != b.center.y);
-        }
-    };
-
-    bool operator!=(cv::Point const &a, cv::Point const &b) const {
-        return (a.x != b.x) || (a.y != b.y);
-    }
-
-    bool operator==(cv::Point const &a, cv::Point const &b) const {
-        return (a.x == b.x) && (a.y == b.y);
-    }
-
     struct Device {
-        Device(cv::RotatedRect coor) : coor(std::move(coor)) {}
+        Device(cv::Point coor) : coor(std::move(coor)) {}
 
 
-        cv::RotatedRect coor;
+        cv::Point coor;
 
         // The x, y dimention length of the device
         // int x_length;
@@ -126,13 +90,13 @@ private:
     std::string errorMessage;
 
     // Device status
-    std::unordered_map<cv::Point, Device, PointHash, PointEqual> chargeable;
-    std::unordered_map<cv::Point, Device, PointHash, PointEqual> unchargeable;
+    std::map<cv::Point, Device, PointLess> chargeable;
+    std::map<cv::Point, Device, PointLess> unchargeable;
 
     std::set<cv::RotatedRect, RotatedRectLess> toSchedule;
 
-    std::set<cv::RotatedRect, RotatedRectLess> schedulingNew;  // the new devices in scheduling
-    std::set<cv::RotatedRect, RotatedRectLess> schedulingOld;  // the old devices rescheduling (coil change)
+//    std::set<cv::RotatedRect, RotatedRectLess> schedulingNew;  // the new devices in scheduling
+//    std::set<cv::RotatedRect, RotatedRectLess> schedulingOld;  // the old devices rescheduling (coil change)
 
     std::queue<std::pair<int, cv::RotatedRect> > movingCommands;  // (coil index, target)
     std::queue<std::pair<int, cv::Point> > movingOldCommands; // (coil index, target) for rescheduled old devices
@@ -142,8 +106,12 @@ private:
     cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0)};
 
     // For wireless charging subsystem
-    int idleCoilCount;
     ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT] = {ChargerManager::NOT_CHARGING};
+    int idleCoilCount() const {
+        int ret = 0;
+        for (const auto &status : oldStatus) if (status == ChargerManager::NOT_CHARGING) ret++;
+        return ret;
+    };
 
 
 };

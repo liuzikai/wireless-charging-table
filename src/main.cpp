@@ -17,9 +17,10 @@ int main(int argc, char** argv){
     vision = std::make_unique<Vision>();
     chargerManager = std::make_unique<ChargerManager>();
     grabberController = std::make_unique<GrabberController>();
+
     control = std::make_unique<Control>(vision.get(), chargerManager.get(), grabberController.get());
 
-    control->join();  // this would never return
+    control->launch();  // this would never return
 
     return 0;
 }

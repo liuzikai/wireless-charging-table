@@ -26,6 +26,11 @@ public:
     void moveGrabber(float x, float y, bool fast = false);
 
     /**
+     * Detach grabber
+     */
+    void detachGrabber();
+
+    /**
      * Detach the grabber and move back to (0, 0)
      */
     void resetGrabber();
