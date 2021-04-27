@@ -34,6 +34,11 @@ RNG rng(12345);
 
 Vision::Vision() {
 
+    th = new std::thread(&Vision::runVisionThread, this);
+}
+
+void Vision::runVisionThread() {
+
     // Open the default camera using default API
     int deviceID = 0;             // 0 = open default camera
     int apiID = cv::CAP_ANY;      // 0 = autodetect default API
@@ -51,10 +56,6 @@ Vision::Vision() {
         return;
     }
 
-    th = new std::thread(&Vision::runVisionThread, this);
-}
-
-void Vision::runVisionThread() {
     while (true) {
 
         Mat frame;
