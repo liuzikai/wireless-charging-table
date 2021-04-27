@@ -306,12 +306,12 @@ int Control::scheduleMoving1() {
 
         // The offset for each explore
         float exploreHeight[2] = { // (x, y)
-                curDevice.size.height * cos(curDevice.angle),
-                curDevice.size.height * sin(curDevice.angle)
+                static_cast<float>(curDevice.size.height * cos(curDevice.angle * M_PI / 180.0f)),
+                static_cast<float>(curDevice.size.height * sin(curDevice.angle * M_PI / 180.0f))
         };
-        float exploreWidth[2] = { // (x, y)
-                curDevice.size.width * cos(90 - curDevice.angle),
-                curDevice.size.width * sin(90 - curDevice.angle)
+        float exploreWidth[2] = { // (x, y)j
+                static_cast<float>(curDevice.size.width * cos(90 - curDevice.angle * M_PI / 180.0f)),
+                static_cast<float>(curDevice.size.width * sin(90 - curDevice.angle * M_PI / 180.0f))
         };
 
         float explorePath[][2] = {  // (width offset, height offset)
@@ -323,8 +323,8 @@ int Control::scheduleMoving1() {
         float finalX = 0;
         float finalY = 0;
         for (const auto &offset : explorePath) {
-            finalX = curDevice.center.x + offset[0] * exploreWidth[0] + offset[1] * exploreHeight[0];
-            finalY = curDevice.center.y + offset[0] * exploreWidth[1] + offset[1] * exploreHeight[1];
+            finalX = curDevice.center.x + offset[0] * exploreWidth[0] / 3 + offset[1] * exploreHeight[0] / 5;
+            finalY = curDevice.center.y + offset[0] * exploreWidth[1] / 5 + offset[1] * exploreHeight[1] / 5;
             grabberController->moveGrabber(finalX, finalY);
 
             sleep(1); // TODO: guarantee to finish
