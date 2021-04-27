@@ -70,11 +70,13 @@ void Vision::runVisionThread() {
             continue;
         }
 
+        if (!acceptImage) continue;
+
         // Calibrate
         imageCalibrate(frame, frameCalibrated);
         Mat frameCalibratedCropped = frameCalibrated(
-                {40, 680},
-                {110, 1170});
+                {CROP_MARGIN_HEIGHT, CAMERA_FRAME_HEIGHT - CROP_MARGIN_HEIGHT},
+                {CROP_MARGIN_WIDTH, CAMERA_FRAME_WIDTH - CROP_MARGIN_WIDTH});
 #if WRITE_IMAGES
         imwrite("test.jpg", frame);
         imwrite("test_calib.jpg", frameCalibrated);
@@ -414,13 +416,15 @@ void Vision::fetchDeviceDiff(vector<cv::RotatedRect> &newDevices, vector<cv::Rot
         const RotatedRect &realRect = getRealRect(device.rect);
         if (!device.reported && device.counter == COUNTER_THRESHOLD) {
             // A device newly reached COUNTER_THRESHOLD
-            std::cout << "Vision: report inserted " << "(" << realRect.center.x << "," << realRect.center.y << ")"
+            std::cout << "Vision: report inserted " << "(" << realRect.center.x << "," << realRect.center.y << ") "
+                      << realRect.size.width << "x" << realRect.size.height << "%" << realRect.angle
                       << std::endl;
             newDevices.emplace_back(realRect);
             device.reported = true;
         } else if (device.reported && device.counter == 0) {
             // A device reported but no longer exist
-            std::cout << "Vision: report deleted " << "(" << realRect.center.x << "," << realRect.center.y << ")"
+            std::cout << "Vision: report deleted " << "(" << realRect.center.x << "," << realRect.center.y << ") "
+                      << realRect.size.width << "x" << realRect.size.height << "%" << realRect.angle
                       << std::endl;
             deletedDevices.emplace_back(realRect);
             shouldDelete = true;
@@ -436,13 +440,13 @@ void Vision::fetchDeviceDiff(vector<cv::RotatedRect> &newDevices, vector<cv::Rot
 
 // We have a list of suitable candidate bounding box, we want to
 // Identify the suitable one and generate the location of the bounding box
-cv::RotatedRect Vision::getRealRect(cv::RotatedRect& old_rect) {
+cv::RotatedRect Vision::getRealRect(cv::RotatedRect &old_rect) {
     // Here we assume that the width of image exactly include the width of table
     // The height of the image exactly include the height of table
     // We assume the upper left corner of the image is the (0,0)
 
-    cv::RotatedRect new_rect=old_rect;
-    new_rect.center.x = TABLE_WIDTH * ((old_rect.center.x-40) / (float) 1060);
+    cv::RotatedRect new_rect = old_rect;
+    new_rect.center.x = TABLE_WIDTH * ((old_rect.center.x - 40) / (float) 1060);
     new_rect.center.y = TABLE_HEIGHT * (old_rect.center.y / (float) 640);
     new_rect.size.width = TABLE_WIDTH * (old_rect.size.width / (float) 1060);
     new_rect.size.height = TABLE_HEIGHT * (old_rect.size.height / (float) 640);

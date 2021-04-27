@@ -50,7 +50,10 @@ int Control::launch() {
         }
 
         if (curState == WAITING) {
+            vision->setAcceptImages(true);
             std::this_thread::sleep_for(std::chrono::seconds(1));
+        } else {
+            vision->setAcceptImages(false);
         }
     }
 }
@@ -318,12 +321,14 @@ int Control::scheduleMoving1() {
         // The offset for each explore
         float shortEdgeStep[2] = {  // (x, y)
                 static_cast<float>(shortEdge * cos(angle * M_PI / 180.0f) / 12),
-                static_cast<float>(shortEdge * sin(angle * M_PI / 180.0f) / 12)
+                static_cast<float>(shortEdge * -sin(angle * M_PI / 180.0f) / 12)
         };
+        std::cerr << "shortEdgeStep: " << shortEdgeStep[0] << ", " << shortEdgeStep[1] << std::endl;
         float longEdgeStep[2] = {  // (x, y)
                 static_cast<float>(longEdge * sin(angle * M_PI / 180.0f) / 20),
-                static_cast<float>(longEdge * cos(angle * M_PI / 180.0f) / 20)
+                static_cast<float>(longEdge * -cos(angle * M_PI / 180.0f) / 20)
         };
+        std::cerr << "longEdgeStep: " << longEdgeStep[0] << ", " << longEdgeStep[1] << std::endl;
 
         float finalX = 0;
         float finalY = 0;

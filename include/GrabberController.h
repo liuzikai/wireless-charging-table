@@ -37,7 +37,7 @@ public:
 
     static constexpr unsigned SPEED_FAST = 42000;    // [mm/min]
     static constexpr unsigned SPEED_NORMAL = 12000;  // [mm/min]
-    static constexpr unsigned SPEED_SLOW = 600;      // [mm/min]
+    static constexpr unsigned SPEED_SLOW = 1800;     // [mm/min]
 
 private:
 
