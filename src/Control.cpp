@@ -276,7 +276,7 @@ int Control::scheduleMoving1() {
         auto c = movingIdleCommands.front();
         movingIdleCommands.pop();
         auto &coil = curCoilPositions[c.first];
-        grabberController->moveGrabber(coil.x, coil.y, true);
+        grabberController->moveGrabber(coil.x, coil.y, GrabberController::SPEED_FAST);
         grabberController->moveGrabber(c.second.x, c.second.y);
         grabberController->detachGrabber();
         curCoilPositions[c.first] = {c.second.x, c.second.y};
@@ -292,7 +292,7 @@ int Control::scheduleMoving1() {
         auto &curDevice = c.second;
         auto &coil = curCoilPositions[c.first];
 
-        grabberController->moveGrabber(coil.x, coil.y, true);
+        grabberController->moveGrabber(coil.x, coil.y, GrabberController::SPEED_FAST);
         grabberController->moveGrabber(curDevice.center.x, curDevice.center.y);
 
         // Wait until complete and check the final wireless charging status
@@ -308,42 +308,39 @@ int Control::scheduleMoving1() {
         if (curDevice.size.width < curDevice.size.height) {
             shortEdge = curDevice.size.width;
             longEdge = curDevice.size.height;
-            angle = curDevice.angle + 90;
+            angle = curDevice.angle + 180;
         } else {
             shortEdge = curDevice.size.height;
             longEdge = curDevice.size.width;
-            angle = curDevice.angle;
+            angle = curDevice.angle + 90;
         }
 
         // The offset for each explore
-        float shortEdgeStep[2] = { // (x, y)j
+        float shortEdgeStep[2] = {  // (x, y)
                 static_cast<float>(shortEdge * cos(angle * M_PI / 180.0f) / 12),
                 static_cast<float>(shortEdge * sin(angle * M_PI / 180.0f) / 12)
         };
-        float longEdgeStep[2] = { // (x, y)
-                static_cast<float>(longEdge * cos((90 - angle) * M_PI / 180.0f) / 20),
-                static_cast<float>(longEdge * sin((90 - angle) * M_PI / 180.0f) / 20)
+        float longEdgeStep[2] = {  // (x, y)
+                static_cast<float>(longEdge * sin(angle * M_PI / 180.0f) / 20),
+                static_cast<float>(longEdge * cos(angle * M_PI / 180.0f) / 20)
         };
-
-
-//        float explorePath[][2] = {  // (shortEdge offset, longEdge offset)
-//                {0,  -2}, {0,  -1}, {0,  0}, {0,  1}, {0,  2},
-//                {-1, -2}, {-1, -1}, {-1, 0}, {-1, 1}, {-1, 2},
-//                {1,  -2}, {1,  -1}, {1,  0}, {1,  1}, {1,  2}
-//        };
 
         float finalX = 0;
         float finalY = 0;
-        for (int i = -2; i <= 2; i++) {
-            for (int j = -5; j <= 5; j++) {
-                curStatus = chargerManager->getChargerStatus(c.first);
-                if (curStatus == ChargerManager::CHARGING) break;
+        for (int i = 0; i <= 2; i++) {
+            for (int iSign : {-1, 1}) {
+                for (int j = 0; j <= 5; j++) {
+                    for (int jSign : {-1, 1}) {
+                        curStatus = chargerManager->getChargerStatus(c.first);
+                        if (curStatus == ChargerManager::CHARGING) break;
 
-                finalX = curDevice.center.x + i * shortEdgeStep[0] + j * longEdgeStep[0];
-                finalY = curDevice.center.y + i * shortEdgeStep[1] + j * longEdgeStep[1];
-                grabberController->moveGrabber(finalX, finalY);
+                        finalX = curDevice.center.x + i * iSign * shortEdgeStep[0] + j * jSign * longEdgeStep[0];
+                        finalY = curDevice.center.y + i * iSign * shortEdgeStep[1] + j * jSign * longEdgeStep[1];
+                        grabberController->moveGrabber(finalX, finalY, GrabberController::SPEED_SLOW);
 
-                sleep(2); // TODO: guarantee to finish
+                        sleep(2); // TODO: guarantee to finish
+                    }
+                }
             }
         }
 
@@ -397,7 +394,7 @@ int Control::scheduleMoving1() {
         auto c = movingOldCommands.front();
         movingOldCommands.pop();
         auto &coil = curCoilPositions[c.first];
-        grabberController->moveGrabber(coil.x, coil.y, true);
+        grabberController->moveGrabber(coil.x, coil.y, GrabberController::SPEED_FAST);
         grabberController->moveGrabber(c.second.x, c.second.y);
         grabberController->detachGrabber();
         curCoilPositions[c.first] = {c.second.x, c.second.y};

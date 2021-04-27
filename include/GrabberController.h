@@ -19,11 +19,11 @@ public:
 
     /**
      * Move the grabber to the target position, attached. This function returns immediately.
-     * @param x     The designation X coordinate
-     * @param y     The designation Y coordinate
-     * @param fast  Whether to move the grabber in the fast speed
+     * @param x      The designation X coordinate
+     * @param y      The designation Y coordinate
+     * @param speed  Moving speed
      */
-    void moveGrabber(float x, float y, bool fast = false);
+    void moveGrabber(float x, float y, unsigned speed = SPEED_NORMAL);
 
     /**
      * Detach grabber
@@ -34,6 +34,10 @@ public:
      * Detach the grabber and move back to (0, 0)
      */
     void resetGrabber();
+
+    static constexpr unsigned SPEED_FAST = 42000;    // [mm/min]
+    static constexpr unsigned SPEED_NORMAL = 12000;  // [mm/min]
+    static constexpr unsigned SPEED_SLOW = 600;      // [mm/min]
 
 private:
 
@@ -51,9 +55,6 @@ private:
 
     static constexpr float Z_DETACHED = 30;
     static constexpr float Z_ATTACHED = 50;
-
-    static constexpr unsigned MOVE_SPEED_DETACHED = 42000;  // [mm/min]
-    static constexpr unsigned MOVE_SPEED_ATTACHED = 12000;  // [mm/min]
 };
 
 
