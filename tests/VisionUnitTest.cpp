@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
    // !!!!!!! Declaration of this variable must be the outside of the for loop
    // otherwise the location map will be overwrite every time
 //    cout<<"before entering for loop"<<endl;
-   DeviceManager devices_manager_interface;
+   VisionFilter devices_manager_interface;
    Vision my_vision;
 
    for (;;) {
@@ -72,11 +72,11 @@ int main(int argc, char **argv) {
         vector<RotatedRect> image_RotatedRect;
     //        cout<<"before launch test"<<endl;
 
-        my_vision.image_calibration(frame, frameCalibration);
+       my_vision.imageCalibrate(frame, frameCalibration);
        cv::Range rows(40, 680);
        cv::Range cols(110, 1170);
        Mat frameCalibration_crop = frameCalibration(rows, cols);
-       image_RotatedRect = my_vision.processing(frameCalibration_crop);
+       image_RotatedRect = my_vision.process(frameCalibration_crop);
        imwrite("test.jpg", frame);
        imwrite("test_calib.jpg", frameCalibration);
 //        break;

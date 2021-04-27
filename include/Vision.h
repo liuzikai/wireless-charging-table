@@ -4,47 +4,50 @@
 #ifndef ECE445_TEAM24_VISION_H
 #define ECE445_TEAM24_VISION_H
 
-
-#include <opencv2/core.hpp>
-#include <opencv2/videoio.hpp>
+#include "Common.h"
+#include <thread>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/objdetect.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core/types.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
-
-#include <iostream>
-#include <vector>
-#include <stdio.h>
-#include <math.h>
-#include <termios.h>
-#include <unistd.h>
-#include <sys/fcntl.h>
-
-#include "Camera.h"
-#include "Common.h"
-#include "DeviceManager.h"
-
-extern SharedParameters sharedParams;
-extern Camera::ParameterSet cameraParams;
 
 class Vision {
 public:
-    std::vector<cv::RotatedRect> processing(cv::Mat &frame);
+
+    Vision();
+
+    void fetchDeviceDiff(vector<cv::RotatedRect> &newDevices, vector<cv::RotatedRect> &deletedDevices);
+
+private:
+
+    std::thread *th = nullptr;
+    void runVisionThread();
+
+    // -------------------------------- Video Capture --------------------------------
+
+    cv::VideoCapture cap;
+
+    static constexpr int CAMERA_FRAME_WIDTH = 720;
+    static constexpr int CAMERA_FRAME_HEIGHT = 1280;
+
+    // -------------------------------- Image processing --------------------------------
+
+    std::vector<cv::RotatedRect> process(cv::Mat &frame);
 
     void drawRotatedRect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &boarderColor);
 
-    std::vector<cv::RotatedRect> findBoundingBox(const cv::Mat &image_BrightnessThreshold,
-                                                 std::vector<std::vector<cv::Point>> &contours);
+    std::vector<cv::RotatedRect> findBoundingBoxes(const cv::Mat &brightnessThreshold,
+                                                   std::vector<std::vector<cv::Point>> &contours);
 
-    void gammaCorrection(const cv::Mat &img, cv::Mat &gamma_corrected, double gamma_);
+    void gammaCorrect(const cv::Mat &img, cv::Mat &gammaCorrected, double gamma);
 
-    void draw_bounding_box(std::vector<cv::RotatedRect> &BoundingBox, cv::Mat &drawing, cv::Mat &frame);
+    void drawBoundingBoxes(std::vector<cv::RotatedRect> &boundingBoxes, cv::Mat &drawing, cv::Mat &frame);
 
-    std::vector<std::vector<cv::Point>> find_draw_contours(const cv::Mat &image_BrightnessThreshold, cv::Mat &drawing);
+    std::vector<std::vector<cv::Point>> findAndDrawContours(const cv::Mat &brightnessThreshold, cv::Mat &drawing);
 
-    void image_calibration(const cv::Mat& frame, cv::Mat& frameCalibration);
+    void imageCalibrate(const cv::Mat& frame, cv::Mat& frameCalibrated);
+
+
     // member variable 
     int blur_kernel_size_ = 9;
     int min_contour_area_ = 2500;
@@ -69,6 +72,33 @@ public:
     // V between 0 to 1
     float high_V_ = 150;
     float low_V_ = 40;
+
+    // -------------------------------- Device Management --------------------------------
+
+    void updateDevices(const vector<cv::RotatedRect> &boxes);
+
+    long long nextUID = 0;
+
+    struct Device {
+        cv::RotatedRect rect;
+        int counter = 0;
+        bool reported = false;
+    };
+
+    map<long long, Device> existingDevices;
+
+    bool rectMatched(const cv::RotatedRect &cur, const cv::RotatedRect &ref);
+
+    bool pointClose(const cv::Point &cur, const cv::Point &ref);
+
+    static constexpr int COORDINATE_OFFSET_THRESHOLD = 15;
+    static constexpr float INTERSECTION_AREA_THRESHOLD = 0.9;
+    static constexpr float AREA_RATIO_THRESHOLD = 0.9;
+    static constexpr float ROTATED_RECT_UPDATE_RATE = 0.5;
+    static constexpr int COUNTER_THRESHOLD = 50;
+
+    cv::RotatedRect combineRect(const cv::RotatedRect &cur, const cv::RotatedRect &ref);
+
 };
 
 #endif //ECE445_TEAM24_VISION_H

@@ -24,13 +24,13 @@ add_executable(QiTable
         src/Control.cpp
         src/Vision.cpp
         src/Camera.cpp
-        src/DeviceManager.cpp
+        src/VisionFilter.cpp
         src/ChargerManager.cpp
         src/GrabberController.cpp
         src/main.cpp)
 
 add_executable(VisionUnitTest
-        src/DeviceManager.cpp
+        src/VisionFilter.cpp
         src/Camera.cpp
         src/Vision.cpp
         tests/VisionUnitTest.cpp)

@@ -2,11 +2,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#define GPU 0
-
-#if GPU
-#include <opencv2/gpu/gpu.hpp>  
-#endif
+#define WRITE_IMAGES 1
 
 // solution1: adjust the parameter ( by passing the parameter to the program )
 // solution2: change to DNN
@@ -20,7 +16,6 @@
 // other image pre-processing technique beside the black & white thresholding
 
 using namespace cv;
-using namespace std;
 // height and width in millimeter
 
 // flag for show image 
@@ -34,16 +29,69 @@ using namespace std;
 // Communication with control TODO: volatile?
 
 
-SharedParameters sharedParams;
-Camera::ParameterSet cameraParams;
 // for random color
 RNG rng(12345);
+
+Vision::Vision() {
+
+    // Open the default camera using default API
+    int deviceID = 0;             // 0 = open default camera
+    int apiID = cv::CAP_ANY;      // 0 = autodetect default API
+    cap.open(deviceID, apiID);
+
+    // Set the resolution
+    cap.set(CAP_PROP_FRAME_WIDTH, CAMERA_FRAME_WIDTH);
+    cap.set(CAP_PROP_FRAME_HEIGHT, CAMERA_FRAME_HEIGHT);
+    std::cout << "Camera: " << cap.get(CAP_PROP_FRAME_WIDTH) << "x" << cap.get(CAP_PROP_FRAME_HEIGHT)
+              << " @ " << cap.get(cv::CAP_PROP_FPS) << " fps" << std::endl;
+
+    // Check if We succeeded
+    if (!cap.isOpened()) {
+        std::cerr << "Camera: ERROR! Unable to open camera!" << std::endl;
+        return;
+    }
+
+    th = new std::thread(&Vision::runVisionThread, this);
+}
+
+void Vision::runVisionThread() {
+    while (true) {
+
+        Mat frame;
+        Mat frameCalibrated;
+
+        // Wait for a new frame from camera and store it
+        cap.read(frame);  // or: cap >> frame;
+
+        // Check if we succeeded
+        if (frame.empty()) {
+            std::cerr << "Camera: ERROR! Blank frame grabbed" << std::endl;
+            continue;
+        }
+
+        // Calibrate
+        imageCalibrate(frame, frameCalibrated);
+        Mat frameCalibratedCropped = frameCalibrated(
+                {40, 680},
+                {110, 1170});
+#if WRITE_IMAGES
+        imwrite("test.jpg", frame);
+        imwrite("test_calib.jpg", frameCalibrated);
+#endif
+
+        // Run detection
+        auto boxes = process(frameCalibratedCropped);
+
+        // Update devices
+        updateDevices(boxes);
+    }
+}
 
 // calibrate the image 
 // https://docs.opencv.org/master/d6/d55/tutorial_table_of_content_calib3d.html
 // https://docs.opencv.org/master/d4/d94/tutorial_camera_calibration.html
 
-void Vision::image_calibration(const Mat& frame, Mat& frameCalibration){
+void Vision::imageCalibrate(const Mat &frame, Mat &frameCalibrated) {
 //    for parameter setting follow this link
 //    https://blog.csdn.net/Loser__Wang/article/details/51811347
     Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
@@ -51,7 +99,7 @@ void Vision::image_calibration(const Mat& frame, Mat& frameCalibration){
     cameraMatrix.at<double>(0, 1) = -5.8;
     cameraMatrix.at<double>(0, 2) = 649.6;
     cameraMatrix.at<double>(1, 1) = 1314.6;
-    cameraMatrix.at<double>(1, 2) = 370.3 ;
+    cameraMatrix.at<double>(1, 2) = 370.3;
 
     Mat distCoeffs = Mat::zeros(5, 1, CV_64F);
 //    first two terms are radian distortion
@@ -69,10 +117,10 @@ void Vision::image_calibration(const Mat& frame, Mat& frameCalibration){
     initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
                             cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
                             imageSize, CV_16SC2, map1, map2);
-    remap(frame, frameCalibration, map1, map2, INTER_LINEAR);
+    remap(frame, frameCalibrated, map1, map2, INTER_LINEAR);
 }
 
-vector<RotatedRect> Vision::processing(Mat &frame) {
+vector<RotatedRect> Vision::process(Mat &frame) {
     // good source of image processing 
     // https://docs.opencv.org/3.4/d2/d96/tutorial_py_table_of_contents_imgproc.html
     imwrite("test.jpg", frame);
@@ -102,10 +150,10 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
 #endif
     // --------------- Gamma correction ---------------
     // it will convert the image to darker 
-    gammaCorrection(gray_image_blur, gamma_corrected_darker, gamma_val_darker_);
+    gammaCorrect(gray_image_blur, gamma_corrected_darker, gamma_val_darker_);
     imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
 
-    gammaCorrection(frame, gamma_corrected_hsv, gamma_val_hsv_);
+    gammaCorrect(frame, gamma_corrected_hsv, gamma_val_hsv_);
 //    imwrite("test_gamma_correction_whiter.jpg", gamma_corrected_hsv);
     // --------------- Try image segmentation using HSV color space --------------- 
     // cout<<high_H_<<endl;
@@ -132,10 +180,10 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
               THRESH_BINARY_INV);
     imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
 
-    vector<vector<Point>> contours_black = find_draw_contours(image_BrightnessThreshold_black_obj, drawing_black_obj);
+    vector<vector<Point>> contours_black = findAndDrawContours(image_BrightnessThreshold_black_obj, drawing_black_obj);
     // draw_contours(contours_black, drawing_black_obj);
     imwrite("test_contours_black_obj.jpg", drawing_black_obj);
-    vector<RotatedRect> BoundingBox = findBoundingBox(image_BrightnessThreshold_black_obj, contours_black);
+    vector<RotatedRect> BoundingBox = findBoundingBoxes(image_BrightnessThreshold_black_obj, contours_black);
 #if SHOW_THRESHOLD_IMAGE
     imshow("thresholding", image_BrightnessThreshold_black_obj);
     waitKey(5);
@@ -143,15 +191,15 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
     // bigger threshold means the pixel need to be bright enough to be set to light
     threshold(image_threshold_hsv_inv, image_BrightnessThreshold_white_obj, white_value_pick_up_, 255, THRESH_BINARY);
 //    imwrite("test_threshold_white_obj.jpg", image_BrightnessThreshold_white_obj);
-    vector<vector<Point>> contours_white = find_draw_contours(image_BrightnessThreshold_white_obj, drawing_white_obj);
+    vector<vector<Point>> contours_white = findAndDrawContours(image_BrightnessThreshold_white_obj, drawing_white_obj);
     // draw_contours(contours_white, drawing_white_obj);
 //    imwrite("test_contours_white_obj.jpg", drawing_white_obj);
-    vector<RotatedRect> BoundingBox_white = this->findBoundingBox(image_BrightnessThreshold_white_obj, contours_white);
+    vector<RotatedRect> BoundingBox_white = findBoundingBoxes(image_BrightnessThreshold_white_obj, contours_white);
     // now draw the rectangle on the mat
 
-    draw_bounding_box(BoundingBox, drawing_black_obj, frame);
+    drawBoundingBoxes(BoundingBox, drawing_black_obj, frame);
     imwrite("test_bouding_box_black_obj.jpg", frame);
-    draw_bounding_box(BoundingBox, drawing_white_obj, frame);
+    drawBoundingBoxes(BoundingBox, drawing_white_obj, frame);
     imwrite("test_bouding_box_white+black_obj.jpg", frame);
     //  TO DO: change it to use draw annoted function
     BoundingBox.insert(BoundingBox.end(), BoundingBox_white.begin(), BoundingBox_white.end());
@@ -161,7 +209,7 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
     // draw the bounding box
 #if SHOW_ANNOTED_IMAGE
     imshow("annoted", frame);
-    waitKey(5);
+//    waitKey(5);
 #endif
     // locate possible bounding box for the phone/airpods
     // the bounding box has been filtered
@@ -173,8 +221,8 @@ vector<RotatedRect> Vision::processing(Mat &frame) {
     return BoundingBox;
 }
 
-void Vision::draw_bounding_box(vector<RotatedRect> &BoundingBox, Mat &drawing, Mat &frame) {
-    for (auto &rect: BoundingBox) {
+void Vision::drawBoundingBoxes(vector<RotatedRect> &boundingBoxes, Mat &drawing, Mat &frame) {
+    for (auto &rect: boundingBoxes) {
         // color are specified in (B,G,R); 
         // draw bounding box on contour
         this->drawRotatedRect(drawing, rect, Scalar(0, 255, 255));
@@ -201,25 +249,25 @@ void Vision::draw_bounding_box(vector<RotatedRect> &BoundingBox, Mat &drawing, M
 // (1668.23, 1205.55)    501.65 x 535.506    -61.2602°
 // (1116.1, 255.104)    348.786 x 556.306    -17.6676°
 // (577.053, 79.5175)    244.472 x 592.656    -53.4007°
-void Vision::gammaCorrection(const Mat &img, Mat &gamma_corrected, double gamma_) {
-    CV_Assert(gamma_ >= 0);
+void Vision::gammaCorrect(const Mat &img, Mat &gammaCorrected, double gamma) {
+    CV_Assert(gamma >= 0);
     // Mat img_gamma_corrected = Mat(img.rows, img.cols, img.type());
     //! [changing-contrast-brightness-gamma-correction]
     Mat lookUpTable(1, 256, CV_8U);
     uchar *p = lookUpTable.ptr();
     for (int i = 0; i < 256; ++i) {
-        p[i] = saturate_cast<uchar>(pow(i / 255.0, gamma_) * 255.0);
+        p[i] = saturate_cast<uchar>(pow(i / 255.0, gamma) * 255.0);
     }
-    LUT(img, lookUpTable, gamma_corrected);
+    LUT(img, lookUpTable, gammaCorrected);
     //! [changing-contrast-brightness-gamma-correction]
     // hconcat(img, res, img_gamma_corrected);
 
 }
 
-vector<vector<Point>> Vision::find_draw_contours(const cv::Mat &image_BrightnessThreshold, Mat &drawing) {
+vector<vector<Point>> Vision::findAndDrawContours(const cv::Mat &brightnessThreshold, Mat &drawing) {
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
-    Mat coutoursOuts = image_BrightnessThreshold.clone();
+    Mat coutoursOuts = brightnessThreshold.clone();
 
     findContours(coutoursOuts, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 //    cout << "before filtering, the number of contour is: " << contours.size() << endl;
@@ -235,7 +283,7 @@ vector<vector<Point>> Vision::find_draw_contours(const cv::Mat &image_Brightness
     return contours;
 }
 
-vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold, vector<vector<Point>> &contours) {
+vector<RotatedRect> Vision::findBoundingBoxes(const Mat &brightnessThreshold, vector<vector<Point>> &contours) {
     // find counter (it find contour of white object from black background on binary image, )
     // In OpenCV, finding contours is like finding white object from black background. 
     // So remember, object to be found should be white and background should be black.
@@ -270,10 +318,10 @@ vector<RotatedRect> Vision::findBoundingBox(const Mat &image_BrightnessThreshold
 
 
         // remove the bounding box that include whole picture
-        if ((rect.size.width == (image_BrightnessThreshold.cols - 1) &&
-             rect.size.height == (image_BrightnessThreshold.rows - 1))
-            || (rect.size.height == (image_BrightnessThreshold.cols - 1) &&
-                rect.size.width == (image_BrightnessThreshold.rows - 1))) {
+        if ((rect.size.width == (brightnessThreshold.cols - 1) &&
+             rect.size.height == (brightnessThreshold.rows - 1))
+            || (rect.size.height == (brightnessThreshold.cols - 1) &&
+                rect.size.width == (brightnessThreshold.rows - 1))) {
             continue;
         }
         // filtering aspect ratio
@@ -328,3 +376,122 @@ void Vision::drawRotatedRect(Mat &img, const RotatedRect &rect, const Scalar &bo
 // https://forums.developer.nvidia.com/t/jetson-nano-fast-gpio-c-example-with-direct-register-access/79692/7
 // https://forums.developer.nvidia.com/t/using-gpio-on-nvidia-jetson-tx2/58607
 // https://forums.developer.nvidia.com/t/uart-communication-with-arduino-nano/83810
+
+
+void Vision::updateDevices(const vector<cv::RotatedRect> &boxes) {
+
+    vector<bool> boxMatched(boxes.size(), false);  // bool table for boxes
+
+    // Update existing devices
+    for (auto &it : existingDevices) {
+        Device &device = it.second;
+
+        // Match existing devices in last update with currently detected boxes
+        int i;
+        for (i = 0; i < boxes.size(); i++) {
+            if (rectMatched(boxes[i], device.rect)) {
+                break;
+            }
+        }
+
+        if (i < boxes.size()) {  // matched
+            boxMatched[i] = true;
+
+            // Update existing device
+            device.rect = combineRect(boxes[i], device.rect);
+            if (device.counter < COUNTER_THRESHOLD) device.counter++;
+
+        } else {  // no match
+
+            if (device.counter > 0) device.counter--;
+            // The item will be needed and erased at fetchDeviceDiff
+
+        }
+    }
+
+    // Insert new device
+    for (int i = 0; i < boxes.size(); i++) {
+        if (!boxMatched[i]) {
+            existingDevices.emplace(nextUID++, Device{boxes[i], 1, false});
+        }
+    }
+}
+
+void Vision::fetchDeviceDiff(vector<cv::RotatedRect> &newDevices, vector<cv::RotatedRect> &deletedDevices) {
+
+    for (auto it = existingDevices.begin(); it != existingDevices.cend() /* not hoisted */; /* no increment */) {
+        Device &device = it->second;
+        bool shouldDelete = false;
+
+        if (!device.reported && device.counter == COUNTER_THRESHOLD) {
+            // A device newly reached COUNTER_THRESHOLD
+            std::cout << "Vision: report inserted " << "(" << device.rect.center.x << "," << device.rect.center.y << ")"
+                      << std::endl;
+            newDevices.emplace_back(getRealRect(device.rect));
+            device.reported = true;
+        } else if (device.reported && device.counter == 0) {
+            // A device reported but no longer exist
+            std::cout << "Vision: report deleted " << "(" << device.rect.center.x << "," << device.rect.center.y << ")"
+                      << std::endl;
+            deletedDevices.emplace_back(getRealRect(device.rect));
+            shouldDelete = true;
+        }
+
+        if (shouldDelete) {
+            it = existingDevices.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+// We have a list of suitable candidate bounding box, we want to
+// Identify the suitable one and generate the location of the bounding box
+vector<cv::Point> Vision::getRealRect(const vector<cv::Point> &locations, int imageWidth, int imageHeight) {
+    // Here we assume that the width of image exactly include the width of table
+    // The height of the image exactly include the height of table
+    // We assume the upper left corner of the image is the (0,0)
+
+    vector<cv::Point> realLocations;
+    for (const auto &point: locations) {
+        int real_x = TABLE_WIDTH * (point.x / (float) imageWidth);
+        int real_y = TABLE_HEIGHT * (point.y / (float) imageHeight);
+        realLocations.emplace_back(cv::Point{real_x, real_y});
+    }
+    return realLocations;
+}
+
+
+bool Vision::pointClose(const cv::Point &cur, const cv::Point &ref) {
+    return ((cur.x > ref.x - COORDINATE_OFFSET_THRESHOLD) &&
+            (cur.x < ref.x + COORDINATE_OFFSET_THRESHOLD) &&
+            (cur.y > ref.y - COORDINATE_OFFSET_THRESHOLD) &&
+            (cur.y < ref.y + COORDINATE_OFFSET_THRESHOLD));
+}
+
+bool Vision::rectMatched(const cv::RotatedRect &cur, const cv::RotatedRect &ref) {
+
+    // Filter by central point
+    if (!pointClose(cur.center, ref.center)) return false;
+
+    // Filter by area size
+    float areaRatio = cur.size.area() / ref.size.area();
+    if (areaRatio < AREA_RATIO_THRESHOLD || areaRatio > 1 / AREA_RATIO_THRESHOLD) return false;
+
+    // Filter by intersection area
+    vector<cv::Point2f> points;
+    if (cv::rotatedRectangleIntersection(cur, ref, points) == cv::INTERSECT_NONE) return false;
+    auto intersectionArea = cv::contourArea(points);
+    if (intersectionArea / cur.size.area() < INTERSECTION_AREA_THRESHOLD) return false;
+
+    return true;
+}
+
+cv::RotatedRect Vision::combineRect(const cv::RotatedRect &cur, const cv::RotatedRect &ref) {
+    cv::Point2f c(cur.center.x * ROTATED_RECT_UPDATE_RATE + ref.center.x * (1 - ROTATED_RECT_UPDATE_RATE),
+                  cur.center.y * ROTATED_RECT_UPDATE_RATE + ref.center.y * (1 - ROTATED_RECT_UPDATE_RATE));
+    cv::Size s(cur.size.width * ROTATED_RECT_UPDATE_RATE + ref.size.width * (1 - ROTATED_RECT_UPDATE_RATE),
+               cur.size.height * ROTATED_RECT_UPDATE_RATE + ref.size.height * (1 - ROTATED_RECT_UPDATE_RATE));
+    float a = cur.angle * ROTATED_RECT_UPDATE_RATE + ref.angle * (1 - ROTATED_RECT_UPDATE_RATE);
+    return {c, s, a};
+}

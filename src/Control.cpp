@@ -3,11 +3,6 @@
 #include <chrono>
 #include <thread>
 
-#include <stdio.h>
-#include <unistd.h>
-// #include <pthread.h>
-#include <assert.h>
-
 #include <set>
 #include <map>
 #include <algorithm>
@@ -15,6 +10,7 @@
 #include "Control.h"
 #include "ChargerManager.h"
 #include "GrabberController.h"
+#include "Vision.h"
 
 // FIXME: [liuzikai] control thread should be robust for any possible errors
 #define ERROR_(message_) { \
@@ -26,18 +22,12 @@
 using namespace std;
 
 
-extern bool visionNeedsHandling;
-extern vector<cv::RotatedRect> newDevices;
-extern vector<cv::RotatedRect> removedDevices;
-
-
-// static pthread_mutex_t pin_locks[ChargerManager::CHARGER_COUNT]; 
-
-
+// static pthread_mutex_t pin_locks[ChargerManager::CHARGER_COUNT];
 
 /********************************* Public Functions *****************************/
 
-Control::Control() : chargerManager(), grabberController("/dev/ttyACM0", 115200) {
+Control::Control(Vision *vision, ChargerManager *chargerManager, GrabberController *grabberController)
+        : vision(vision), chargerManager(chargerManager), grabberController(grabberController) {
 
     curState = WAITING;
 
@@ -49,7 +39,7 @@ Control::Control() : chargerManager(), grabberController("/dev/ttyACM0", 115200)
 int Control::launch() {
     // Control thread never exits
     while (true) {
-        std::cout<<"current state: "<< curState <<std::endl;
+        std::cout << "current state: " << curState << std::endl;
         switch (curState) {
             case WAITING:
                 scheduleWaiting();
@@ -66,13 +56,13 @@ int Control::launch() {
             case ERROR:
                 scheduleError();
                 break;
-            case NUM_STATES:
-                std::cerr << "Control: invalid current state " << curState << std::endl;
-                curState = WAITING;
-                break;
+            default:
+                assert(!"Invalid state");
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (curState == WAITING) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
     }
 }
 
@@ -82,17 +72,18 @@ int Control::launch() {
 int Control::scheduleWaiting() {
 
     bool needMoving = false;
-    set<cv::Point, PointLess> toIgnore; // filled when new status is CHARGING
-    set<cv::Point, PointLess> toConfirm; // filled when new status is NOT_CHARGING
+    set<cv::Point, PointLess> toIgnore;  // filled when new status is CHARGING
+    set<cv::Point, PointLess> toConfirm;  // filled when new status is NOT_CHARGING
 
     // Pull for the wireless charging status
     for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++) {
-        auto curStatus = chargerManager.getChargerStatus(i);
+        auto curStatus = chargerManager->getChargerStatus(i);
 
         // Retry for once if the status is unknown
+        // FIXME: [liuzikai] retry for more times
         if (curStatus == ChargerManager::UNKNOWN) {
             usleep(1000000);
-            curStatus = chargerManager.getChargerStatus(i);
+            curStatus = chargerManager->getChargerStatus(i);
 
             if (curStatus == ChargerManager::UNKNOWN) {
                 ERROR_("Pull charging status failed");
@@ -115,7 +106,7 @@ int Control::scheduleWaiting() {
                         ERROR_("Duplicate Device!");
                     }
                     toIgnore.insert(curCoilPositions[i]);
-                    chargeable.insert(make_pair(curCoilPositions[i], Device(curCoilPositions[i])));
+                    chargeable.emplace(curCoilPositions[i], Device(curCoilPositions[i]));
 
                     if (unchargeable.find(curCoilPositions[i]) != unchargeable.end()) {
                         unchargeable.erase(curCoilPositions[i]);
@@ -123,7 +114,7 @@ int Control::scheduleWaiting() {
 
                     break;
 
-                    // A device is removed/finished charging
+                // A device is removed/finished charging
                 case ChargerManager::NOT_CHARGING:
 
                     idleCoilCount++;
@@ -137,51 +128,46 @@ int Control::scheduleWaiting() {
         }
     }
 
-    // TODO: Need a pause here for vision to update?
-
-    // Pull for vision status
-    if (visionNeedsHandling) {
-        for (const auto &newDevice : newDevices) {
-            // Check whether this new device should be ignored
-            if (toIgnore.find(newDevice.center) != toIgnore.end()) {
-                toIgnore.erase(newDevice.center);
-                continue;
-            }
-
-            toSchedule.insert(newDevice);
-
+    // Pull for vision updates
+    vector<cv::RotatedRect> newDevices, removedDevices;
+    vision->fetchDeviceDiff(newDevices, removedDevices);
+    
+    for (const auto &newDevice : newDevices) {
+        // Check whether this new device should be ignored
+        if (toIgnore.find(newDevice.center) != toIgnore.end()) {
+            toIgnore.erase(newDevice.center);
+            continue;
         }
 
-        for (const auto &removedDevice : removedDevices) {
-            // Check the confirm: the removal has already been noticed by wireless charging
-            if (toConfirm.find(removedDevice.center) != toConfirm.end()) {
-
-                toConfirm.erase(removedDevice.center);
-
-                // The device was charging but taken away
-                // if (!chargeable.erase(removedDevice)) {
-                //     ERROR_("Chargeable map panic");
-                // }
-
-                continue;
-            }
-
-            // Remove the device that is either unchargeable or not scheduled
-            if (!unchargeable.erase(removedDevice.center)) {
-                if (toSchedule.find(removedDevice) != toSchedule.end()) {
-                    toSchedule.erase(removedDevice);
-//                    ERROR_("Unchargeable map or to schedule panic");
-                }
-
-
-            }
-        }
-
-        visionNeedsHandling = false;
-        newDevices.clear();
-        removedDevices.clear();
-
+        toSchedule.insert(newDevice);
     }
+
+    for (const auto &removedDevice : removedDevices) {
+
+        // Check the confirm: the removal has already been noticed by wireless charging
+        // FIXME: [liuzikai] coordination from curCoilPositions and from vision can hardly match exactly, use range compare
+
+        if (toConfirm.find(removedDevice.center) != toConfirm.end()) {
+
+            toConfirm.erase(removedDevice.center);
+
+            // The device was charging but taken away
+            // if (!chargeable.erase(removedDevice)) {
+            //     ERROR_("Chargeable map panic");
+            // }
+
+            continue;
+        }
+
+        // Remove the device that is either unchargeable or not scheduled
+        if (!unchargeable.erase(removedDevice.center)) {
+            if (toSchedule.find(removedDevice) != toSchedule.end()) {
+                toSchedule.erase(removedDevice);
+//                    ERROR_("Unchargeable map or to schedule panic");
+            }
+        }
+    }
+
 
     // if (toIgnore.size() != 0){
     //     ERROR_("Conflict message from wireless and vision!");
@@ -277,7 +263,7 @@ int Control::scheduleCalculating() {
         for (const auto &target : coilTarget) {
             if (deviceMapping.find(target.second) != deviceMapping.end())
                 movingCommands.push(make_pair(target.first, deviceMapping[target.second]));
-            else 
+            else
                 movingOldCommands.push(make_pair(target.first, target.second))
         }
     }
@@ -306,13 +292,13 @@ int Control::scheduleMoving1() {
     bool needMoving = false; // for moving the idle coils to initial position
 
     // Move the idle coils to initial first
-    while (!movingIdleCommands.empty()){
+    while (!movingIdleCommands.empty()) {
         auto c = movingIdleCommands.front();
         movingIdleCommands.pop();
         auto &coil = curCoilPositions[c.first];
-        grabberController.moveGrabber(coil.x, coil.y, true);
-        grabberController.moveGrabber(c.second.x, c.second.y);
-        grabberController.resetGrabber();
+        grabberController->moveGrabber(coil.x, coil.y, true);
+        grabberController->moveGrabber(c.second.x, c.second.y);
+        grabberController->resetGrabber();
         sleep(5); // TODO: garenttee to finish! 
     }
 
@@ -325,57 +311,59 @@ int Control::scheduleMoving1() {
         auto &curDevice = c.second;
         auto &coil = curCoilPositions[c.first];
 
-        grabberController.moveGrabber(coil.x, coil.y, true);
-        grabberController.moveGrabber(curDevice.center.x, curDevice.center.y);
+        grabberController->moveGrabber(coil.x, coil.y, true);
+        grabberController->moveGrabber(curDevice.center.x, curDevice.center.y);
 
         // Wait until complete and check the final wireless charging status
         sleep(5); // TODO: guarantee to finish! 
 
         // Update the status according to wireless read
 
-        auto curStatus = chargerManager.getChargerStatus(c.first);
+        auto curStatus = chargerManager->getChargerStatus(c.first);
 
         // Explore 3@width x 5@height
 
         // The offset for each explore
         int exploreHeight[2] = [ // (x, y)
-            curDevice.size.height * cos(curDevice.angle), 
-            curDevice.size.height * sin(curDevice.angle)
+        curDevice.size.height * cos(curDevice.angle),
+                curDevice.size.height * sin(curDevice.angle)
         ];
         int exploreWidth[2] = [ // (x, y)
-            curDevice.size.width * cos(90-curDevice.angle), 
-            curDevice.size.width * sin(90-curDevice.angle)
+        curDevice.size.width * cos(90 - curDevice.angle),
+                curDevice.size.width * sin(90 - curDevice.angle)
         ];
 
-        int explorePath[3][5] = { // (width offset, height offset)
-            {{0, -2}, {0, -1}, {0, 0}, {0, 1}, {0, 2}},
-            {{-1, -2}, {-1, -1}, {-1, 0}, {-1, 1}, {-1, 2}},
-            {{1, -2}, {1, -1}, {1, 0}, {1, 1}, {1, 2}}
+        int explorePath[3][5][2] = { // (width offset, height offset)
+                {{0,  -2}, {0,  -1}, {0,  0}, {0,  1}, {0,  2}},
+                {{-1, -2}, {-1, -1}, {-1, 0}, {-1, 1}, {-1, 2}},
+                {{1,  -2}, {1,  -1}, {1,  0}, {1,  1}, {1,  2}}
         };
 
         int finalX = 0;
         int finalY = 0;
-        for (int i = 0; i < 3; i++){
-            for (int j = 0; j < 5; j++){
-                finalX = curDevice.center.x + explorePath[i][j][0] * exploreWidth[0] + explorePath[i][j][1] * exploreHeight[0];
-                finalY = curDevice.center.y + explorePath[i][j][0] * exploreWidth[1] + explorePath[i][j][1] * exploreHeight[1];
-                
-                grabberController.moveGrabber(finalX, finalY);
-                
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 5; j++) {
+                finalX = curDevice.center.x + explorePath[i][j][0] * exploreWidth[0] +
+                         explorePath[i][j][1] * exploreHeight[0];
+                finalY = curDevice.center.y + explorePath[i][j][0] * exploreWidth[1] +
+                         explorePath[i][j][1] * exploreHeight[1];
+
+                grabberController->moveGrabber(finalX, finalY);
+
                 sleep(1); // guarantee to finish
-                curStatus = chargerManager.getChargerStatus(c.first);
+                curStatus = chargerManager->getChargerStatus(c.first);
                 if (curState == ChargerManager::CHARGING) break;
             }
             if (curState == ChargerManager::CHARGING) break;
         }
 
-            
-        grabberController.resetGrabber();
+
+        grabberController->resetGrabber();
 
         // // Retry for once if the status is unknown
         // if (curStatus == ChargerManager::UNKNOWN) {
         //     usleep(1000000);
-        //     curStatus = chargerManager.getChargerStatus(c.first);
+        //     curStatus = chargerManager->getChargerStatus(c.first);
 
         //     if (curStatus == ChargerManager::UNKNOWN) {
         //         ERROR_("Pull charging status failed");
@@ -419,30 +407,30 @@ int Control::scheduleMoving1() {
     }
 
     // Move for the rescheduled devices
-    while (!movingOldCommands.empty()){
+    while (!movingOldCommands.empty()) {
         auto c = movingOldCommands.front();
         movingOldCommands.pop();
         auto &coil = curCoilPositions[c.first];
-        grabberController.moveGrabber(coil.x, coil.y, true);
-        grabberController.moveGrabber(c.second.x, c.second.y);
-        grabberController.resetGrabber();
+        grabberController->moveGrabber(coil.x, coil.y, true);
+        grabberController->moveGrabber(c.second.x, c.second.y);
+        grabberController->resetGrabber();
 
         sleep(5); // TODO: garenttee to finish! 
 
-        auto curStatus = chargerManager.getChargerStatus(c.first);
+        auto curStatus = chargerManager->getChargerStatus(c.first);
 
         if (curStatus != ChargerManager::CHARGING) {
-            
+
             // Rescheduled device no longer chargeable
             auto re = chargeable.find(c.second);
 
-            if (re != chargeable.end()){
+            if (re != chargeable.end()) {
                 unchargeable.emplace(*re);
                 chargeable.erase(re->first);
             } else {
                 ERROR_("Chargeable map panic at reschedule");
             }
-            
+
         }
     }
 

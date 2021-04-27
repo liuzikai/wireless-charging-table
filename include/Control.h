@@ -3,38 +3,43 @@
 
 // Created by Tingkai Liu 2021-03-29
 
+#include "Common.h"
+#include "ChargerManager.h"
+#include <utility>
 #include <vector>
 #include <unordered_map>
 #include <string>
 #include <set>
 #include <queue>
 #include <thread>
-
-#include "ChargerManager.h"
-#include "GrabberController.h"
-
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/types.hpp>
 
+// Forward declaration
+class Vision;
+class ChargerManager;
+class GrabberController;
+
 class Control {
 public:
 
-    Control();
+    explicit Control(Vision *vision, ChargerManager *chargerManager, GrabberController *grabberController);
 
-    // ~Control();
-
-    bool controlMoving() {return curState == MOVING1 || curState == MOVING2; };
+    void join() { th->join(); }
 
 private:
+
+    Vision *vision;
+    ChargerManager *chargerManager;
+    GrabberController *grabberController;
+
+    std::thread *th = nullptr;
+    int launch();  // thread body, never returns
 
     enum State {
         WAITING, CALCULATING, MOVING1, MOVING2, ERROR, NUM_STATES
     };
-
-    std::thread *th = nullptr;
-
-    int launch();  // thread body, never returns
 
     struct RotatedRectLess {
         bool operator()(cv::RotatedRect const &a, cv::RotatedRect const &b) const {
@@ -84,7 +89,7 @@ private:
     }
 
     struct Device {
-        Device(cv::RotatedRect coor) : coor(coor) {}
+        Device(cv::RotatedRect coor) : coor(std::move(coor)) {}
 
 
         cv::RotatedRect coor;
@@ -98,9 +103,6 @@ private:
 
     /********************************* Scheduling Controls *****************************/
 
-    using ScheduleFunction = int (*)();
-
-    ScheduleFunction schedule[NUM_STATES];
 
     /**
      * The scheduling functions for each states
@@ -116,9 +118,6 @@ private:
 
     int scheduleError();
 
-
-    ChargerManager chargerManager;
-    GrabberController grabberController;
 
     /********************************* Data Fields *****************************/
 
