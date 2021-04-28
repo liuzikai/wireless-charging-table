@@ -348,8 +348,8 @@ int Control::scheduleMoving1() {
             {0, 0}, {-0.1, 0.1}, {-0.2, 0.2}, {-0.2, 0.2}, {-0.1, 0.1}, {0, 0},
         };
 
-        float finalX = 0;
-        float finalY = 0;
+        int finalX = 0;
+        int finalY = 0;
         int p;
         for (p = 0; p < sizeof(explorePath) / sizeof(explorePath[0]); p++) {
             curStatus = chargerManager->getChargerStatus(c.first);
