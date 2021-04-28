@@ -65,7 +65,7 @@ int Control::scheduleWaiting() {
 
     bool needMoving = false;
     set<cv::Point, PointLess> toIgnore;   // filled when new status is CHARGING
-    set<cv::Point, PointLess> toConfirm;  // filled when new status is NOT_CHARGING
+    // set<cv::Point, PointLess> toConfirm;  // filled when new status is NOT_CHARGING
 
     // Pull for the wireless charging status
     for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++) {
@@ -107,7 +107,15 @@ int Control::scheduleWaiting() {
                     // A device is removed/finished charging
                 case ChargerManager::NOT_CHARGING:
 
-                    toConfirm.insert(curCoilPositions[i]);
+                    auto curDevice = chargeable.find(curCoilPositions[i]);
+                    if (curDevice != chargeable.end()) {
+                        unchargeable.emplace(*curDevice); // would be handled if the device is removed
+                        chargeable.erase(curDevice->first);
+                    } else {
+                        ERROR_("A original chargeing device is not in chargeable!");
+                    }
+
+                    // toConfirm.insert(curCoilPositions[i]);
                     needMoving = true;
                     break;
 
@@ -136,17 +144,17 @@ int Control::scheduleWaiting() {
         // Check the confirm: the removal has already been noticed by wireless charging
         // FIXME: [liuzikai] coordination from curCoilPositions and from vision can hardly match exactly, use range compare
 
-        if (toConfirm.find(removedDevice.center) != toConfirm.end()) {
+        // if (toConfirm.find(removedDevice.center) != toConfirm.end()) {
 
-            toConfirm.erase(removedDevice.center);
+        //     toConfirm.erase(removedDevice.center);
 
-            // The device was charging but taken away
-            // if (!chargeable.erase(removedDevice)) {
-            //     ERROR_("Chargeable map panic");
-            // }
+        //     // The device was charging but taken away
+        //     // if (!chargeable.erase(removedDevice)) {
+        //     //     ERROR_("Chargeable map panic");
+        //     // }
 
-            continue;
-        }
+        //     continue;
+        // }
 
         // Remove the device that is either unchargeable or not scheduled
         if (!unchargeable.erase(removedDevice.center)) {
@@ -163,16 +171,16 @@ int Control::scheduleWaiting() {
     // }
 
     // Mark the remaining toConfirm devices as unchargeable (finished charging)
-    for (const auto &confirm : toConfirm) {
-        auto curDevice = chargeable.find(confirm);
+    // for (const auto &confirm : toConfirm) {
+    //     auto curDevice = chargeable.find(confirm);
 
-        if (curDevice != chargeable.end()) {
-            unchargeable.emplace(*curDevice);
-            chargeable.erase(curDevice->first);
-        } else {
-            ERROR_("Conflict message from wireless and vision!");
-        }
-    }
+    //     if (curDevice != chargeable.end()) {
+    //         unchargeable.emplace(*curDevice);
+    //         chargeable.erase(curDevice->first);
+    //     } else {
+    //         ERROR_("Conflict message from wireless and vision!");
+    //     }
+    // }
 
     needMoving |= !toSchedule.empty() && idleCoilCount() > 0;
     if (needMoving) {
@@ -264,8 +272,8 @@ int Control::scheduleCalculating() {
         }
     }
 
-    if (!movingCommands.empty()) curState = MOVING1;
-    else curState = WAITING;
+    if (movingCommands.empty() && movingOldCommands.empty() && movingIdleCommands.empty() ) curState = WAITING;
+    else curState = MOVING1;
 
     return 0;
 }
@@ -419,6 +427,9 @@ int Control::scheduleMoving1() {
             } else {
                 ERROR_("Chargeable map panic at reschedule");
             }
+
+            needMoving = true;
+
         }
 
         oldStatus[c.first] = curStatus;
