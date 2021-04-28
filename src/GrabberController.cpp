@@ -64,8 +64,13 @@ void GrabberController::issueMoveCommand(unsigned speed, float x, float y, float
 void GrabberController::serialSendCommand(const string &s) {
     boost::asio::write(serial, boost::asio::buffer(s.c_str(), s.size()));
     boost::asio::write(serial, boost::asio::buffer("\n", 1));
+    waitForOK(s);
+    boost::asio::write(serial, boost::asio::buffer("M400\n", 5));
+    waitForOK("M400");
+}
 
-    /*boost::asio::streambuf buf;
+void GrabberController::waitForOK(const string &s) {
+    boost::asio::streambuf buf;
     boost::system::error_code ec;
     auto readLen = boost::asio::read_until(serial, buf, '\n', ec);
     if (ec) {
@@ -75,5 +80,5 @@ void GrabberController::serialSendCommand(const string &s) {
         if (info != "ok") {
             std::cerr << "\"" << s << "\" ->  \"" << info << "\"" << std::endl;
         }
-    }*/
+    }
 }

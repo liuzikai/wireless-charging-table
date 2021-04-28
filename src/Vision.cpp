@@ -70,8 +70,6 @@ void Vision::runVisionThread() {
             continue;
         }
 
-        if (!acceptImage) continue;
-
         // Calibrate
         imageCalibrate(frame, frameCalibrated);
         Mat frameCalibratedCropped = frameCalibrated(
@@ -91,6 +89,8 @@ void Vision::runVisionThread() {
 
         // Run detection
         auto boxes = process(frameCalibratedCropped);
+
+        if (!acceptImage) continue;
 
         // Update devices
         updateDevices(boxes);

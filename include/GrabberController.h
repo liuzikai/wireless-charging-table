@@ -55,6 +55,8 @@ private:
 
     static constexpr float Z_DETACHED = 30;
     static constexpr float Z_ATTACHED = 50;
+
+    void waitForOK(const string &s);
 };
 
 

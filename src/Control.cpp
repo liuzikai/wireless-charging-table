@@ -50,8 +50,8 @@ int Control::launch() {
         }
 
         if (curState == WAITING) {
-            vision->setAcceptImages(true);
             std::this_thread::sleep_for(std::chrono::seconds(1));
+            vision->setAcceptImages(true);
         } else {
             vision->setAcceptImages(false);
         }
@@ -108,15 +108,21 @@ int Control::scheduleWaiting() {
                 case ChargerManager::NOT_CHARGING: {
                     
                     
-                    auto curDevice = chargeable.begin();
-                    for ( ; curDevice != chargeable.end(); curDevice++){
-                        if (curDevice->second.coor == curCoilPositions[i]) break;
+                    auto it = chargeable.begin();
+                    for (; it != chargeable.end(); it++){
+                        if (it->second.coor == curCoilPositions[i]) break;
                     }
 
-                    if (curDevice != chargeable.end()) {
-                        unchargeable.emplace(*curDevice); // would be handled if the device is removed
-                        chargeable.erase(curDevice->first);
+                    if (it != chargeable.end()) {
+                        unchargeable.emplace(*it); // would be handled if the device is removed
+                        chargeable.erase(it->first);
                     } else {
+                        cerr << "Coil is at " << curCoilPositions[i].x << "," << curCoilPositions[i].y  << endl;
+                        cerr << "Chargeable devices:" << endl;
+                        for (const auto &charge : chargeable){
+                            cerr << charge.first.x << "," << charge.first.y << " -> " <<
+                            charge.second.coor.x << "," << charge.second.coor.y << endl;
+                        }
                         ERROR_("A original chargeing device is not in chargeable!");
                     }
 
@@ -469,6 +475,7 @@ int Control::scheduleMoving2() {
 }
 
 int Control::scheduleError() {
+    sleep(5);
     printf("Error: %s\n", errorMessage.c_str());
     return 0;
 }
