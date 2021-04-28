@@ -26,7 +26,7 @@ public:
 
 private:
 
-    bool acceptImage = false;
+    bool acceptImage = true;
 
     std::thread *th = nullptr;
     void runVisionThread();
@@ -38,8 +38,8 @@ private:
     static constexpr int CAMERA_FRAME_WIDTH = 1280;
     static constexpr int CAMERA_FRAME_HEIGHT = 720;
 
-    static constexpr int CROP_MARGIN_WIDTH = 115;
-    static constexpr int CROP_MARGIN_HEIGHT = 20;
+    static constexpr int CROP_MARGIN_WIDTH = 115+145;
+    static constexpr int CROP_MARGIN_HEIGHT = 20+26;
 
     static constexpr int TABLE_WIDTH = 400;
     static constexpr int TABLE_HEIGHT = 260;

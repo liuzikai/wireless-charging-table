@@ -2,7 +2,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#define WRITE_IMAGES 1
+#define WRITE_IMAGES 0
 
 // solution1: adjust the parameter ( by passing the parameter to the program )
 // solution2: change to DNN
@@ -77,6 +77,13 @@ void Vision::runVisionThread() {
         Mat frameCalibratedCropped = frameCalibrated(
                 {CROP_MARGIN_HEIGHT, CAMERA_FRAME_HEIGHT - CROP_MARGIN_HEIGHT},
                 {CROP_MARGIN_WIDTH, CAMERA_FRAME_WIDTH - CROP_MARGIN_WIDTH});
+//        char key = waitKey(1);
+//        if (key == 'q' || key == 'Q')
+//        {
+//            string imgname;
+//            imgname =  "ruler.jpg";
+//            imwrite(imgname, frameCalibratedCropped);
+//        }
 #if WRITE_IMAGES
         imwrite("test.jpg", frame);
         imwrite("test_calib.jpg", frameCalibrated);
@@ -126,7 +133,7 @@ void Vision::imageCalibrate(const Mat &frame, Mat &frameCalibrated) {
 vector<RotatedRect> Vision::process(Mat &frame) {
     // good source of image processing 
     // https://docs.opencv.org/3.4/d2/d96/tutorial_py_table_of_contents_imgproc.html
-    imwrite("test.jpg", frame);
+//    imwrite("test.jpg", frame);
     Mat frame_HSV;
     Mat image_threshold_hsv;
     Mat image_threshold_hsv_blur;
@@ -143,10 +150,10 @@ vector<RotatedRect> Vision::process(Mat &frame) {
     // convert original image to gray image and apply smoothing
 
     cvtColor(frame, gray_image, COLOR_BGR2GRAY);
-    imwrite("test_gray.jpg", gray_image);
+//    imwrite("test_gray.jpg", gray_image);
     // kernel size is 9 by 9
     blur(gray_image, gray_image_blur, Size(blur_kernel_size_, blur_kernel_size_));
-    imwrite("test_gray_smooth.jpg", gray_image_blur);
+//    imwrite("test_gray_smooth.jpg", gray_image_blur);
 #if SHOW_GRAY_IMAGE
     imshow("gray", gray_image);
     waitKey(5);
@@ -154,7 +161,7 @@ vector<RotatedRect> Vision::process(Mat &frame) {
     // --------------- Gamma correction ---------------
     // it will convert the image to darker 
     gammaCorrect(gray_image_blur, gamma_corrected_darker, gamma_val_darker_);
-    imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
+//    imwrite("test_gamma_correction_darker.jpg", gamma_corrected_darker);
 
     gammaCorrect(frame, gamma_corrected_hsv, gamma_val_hsv_);
 //    imwrite("test_gamma_correction_whiter.jpg", gamma_corrected_hsv);
@@ -181,11 +188,11 @@ vector<RotatedRect> Vision::process(Mat &frame) {
     // --------- thresholding the image ----------
     threshold(gamma_corrected_darker, image_BrightnessThreshold_black_obj, black_value_pick_up_, 255,
               THRESH_BINARY_INV);
-    imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
+//    imwrite("test_threshold_black_obj.jpg", image_BrightnessThreshold_black_obj);
 
     vector<vector<Point>> contours_black = findAndDrawContours(image_BrightnessThreshold_black_obj, drawing_black_obj);
     // draw_contours(contours_black, drawing_black_obj);
-    imwrite("test_contours_black_obj.jpg", drawing_black_obj);
+//    imwrite("test_contours_black_obj.jpg", drawing_black_obj);
     vector<RotatedRect> BoundingBox = findBoundingBoxes(image_BrightnessThreshold_black_obj, contours_black);
 #if SHOW_THRESHOLD_IMAGE
     imshow("thresholding", image_BrightnessThreshold_black_obj);
@@ -201,9 +208,9 @@ vector<RotatedRect> Vision::process(Mat &frame) {
     // now draw the rectangle on the mat
 
     drawBoundingBoxes(BoundingBox, drawing_black_obj, frame);
-    imwrite("test_bouding_box_black_obj.jpg", frame);
+//    imwrite("test_bouding_box_black_obj.jpg", frame);
     drawBoundingBoxes(BoundingBox, drawing_white_obj, frame);
-    imwrite("test_bouding_box_white+black_obj.jpg", frame);
+//    imwrite("test_bouding_box_white+black_obj.jpg", frame);
     //  TO DO: change it to use draw annoted function
     BoundingBox.insert(BoundingBox.end(), BoundingBox_white.begin(), BoundingBox_white.end());
     // filter the bounding box
@@ -446,10 +453,10 @@ cv::RotatedRect Vision::getRealRect(cv::RotatedRect &old_rect) {
     // We assume the upper left corner of the image is the (0,0)
 
     cv::RotatedRect new_rect = old_rect;
-    new_rect.center.x = TABLE_WIDTH * ((old_rect.center.x - 40) / (float) 1060);
-    new_rect.center.y = TABLE_HEIGHT * (old_rect.center.y / (float) 640);
-    new_rect.size.width = TABLE_WIDTH * (old_rect.size.width / (float) 1060);
-    new_rect.size.height = TABLE_HEIGHT * (old_rect.size.height / (float) 640);
+    new_rect.center.x = (old_rect.center.x / 2.15f);
+    new_rect.center.y = (old_rect.center.y / 2.15f);
+    new_rect.size.width = (old_rect.size.width / 2.15f);
+    new_rect.size.height = (old_rect.size.height / 2.15f);
     return new_rect;
 }
 

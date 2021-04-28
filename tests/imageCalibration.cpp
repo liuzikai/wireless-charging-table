@@ -28,6 +28,7 @@ int main(int argc, char **argv){
         return -1;
     }
     Mat frame;
+    Mat frameCalibrated;
     string imgname;
     int f = 1;
     while (1) //Show the image captured in the window and repeat

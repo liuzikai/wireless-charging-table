@@ -105,8 +105,7 @@ int Control::scheduleWaiting() {
                     break;
 
                     // A device is removed/finished charging
-                case ChargerManager::NOT_CHARGING:
-
+                case ChargerManager::NOT_CHARGING: {
                     auto curDevice = chargeable.find(curCoilPositions[i]);
                     if (curDevice != chargeable.end()) {
                         unchargeable.emplace(*curDevice); // would be handled if the device is removed
@@ -117,8 +116,8 @@ int Control::scheduleWaiting() {
 
                     // toConfirm.insert(curCoilPositions[i]);
                     needMoving = true;
+                }
                     break;
-
                 default:
                     assert(0);
             }
@@ -328,34 +327,42 @@ int Control::scheduleMoving1() {
 
         // The offset for each explore
         float shortEdgeStep[2] = {  // (x, y)
-                static_cast<float>(shortEdge * cos(angle * M_PI / 180.0f) / 12),
-                static_cast<float>(shortEdge * -sin(angle * M_PI / 180.0f) / 12)
+                static_cast<float>(shortEdge * cos(angle * M_PI / 180.0f)),
+                static_cast<float>(shortEdge * -sin(angle * M_PI / 180.0f))
         };
         std::cerr << "shortEdgeStep: " << shortEdgeStep[0] << ", " << shortEdgeStep[1] << std::endl;
         float longEdgeStep[2] = {  // (x, y)
-                static_cast<float>(longEdge * sin(angle * M_PI / 180.0f) / 20),
-                static_cast<float>(longEdge * -cos(angle * M_PI / 180.0f) / 20)
+                static_cast<float>(longEdge * sin(angle * M_PI / 180.0f)),
+                static_cast<float>(longEdge * -cos(angle * M_PI / 180.0f))
         };
         std::cerr << "longEdgeStep: " << longEdgeStep[0] << ", " << longEdgeStep[1] << std::endl;
 
+        static const float explorePath[][2] = {  // (long edge, short edge)
+            {0, 0}, {0.1, 0}, {0.2, 0}, {0.3, 0}, {0.3, 0}, {0.2, 0}, {0.1, 0}, {0, 0},
+            {0, 0}, {-0.1, 0}, {-0.2, 0}, {-0.3, 0}, {-0.3, 0}, {-0.2, 0}, {-0.1, 0}, {0, 0},
+            {0, 0}, {0, 0.1}, {0, 0.2}, {0, 0.2}, {0, 0.1}, {0, 0},
+            {0, 0}, {0, -0.1}, {0, -0.2}, {0, -0.2}, {0, -0.1}, {0, 0},
+            {0, 0}, {0.1, 0.1}, {0.2, 0.2}, {0.2, 0.2}, {0.1, 0.1}, {0, 0},
+            {0, 0}, {-0.1, -0.1}, {-0.2, -0.2}, {-0.2, -0.2}, {-0.1, -0.1}, {0, 0},
+            {0, 0}, {0.1, -0.1}, {0.2, -0.2}, {0.2, -0.2}, {0.1, -0.1}, {0, 0},
+            {0, 0}, {-0.1, 0.1}, {-0.2, 0.2}, {-0.2, 0.2}, {-0.1, 0.1}, {0, 0},
+        };
+
         float finalX = 0;
         float finalY = 0;
-        for (int i = 0; i <= 2; i++) {
-            for (int iSign : {-1, 1}) {
-                for (int j = 0; j <= 5; j++) {
-                    for (int jSign : {-1, 1}) {
-                        curStatus = chargerManager->getChargerStatus(c.first);
-                        if (curStatus == ChargerManager::CHARGING) break;
-
-                        finalX = curDevice.center.x + i * iSign * shortEdgeStep[0] + j * jSign * longEdgeStep[0];
-                        finalY = curDevice.center.y + i * iSign * shortEdgeStep[1] + j * jSign * longEdgeStep[1];
-                        grabberController->moveGrabber(finalX, finalY, GrabberController::SPEED_SLOW);
-
-                        sleep(2); // TODO: guarantee to finish
-                    }
-                }
-            }
+        int p;
+        for (p = 0; p < sizeof(explorePath) / sizeof(explorePath[0]); p++) {
+            curStatus = chargerManager->getChargerStatus(c.first);
+            if (curStatus == ChargerManager::CHARGING) break;
+            finalX = curDevice.center.x + explorePath[p][1] * shortEdgeStep[0] + explorePath[p][0] * longEdgeStep[0];
+            finalY = curDevice.center.y + explorePath[p][1] * shortEdgeStep[1] + explorePath[p][0] * longEdgeStep[1];
+            grabberController->moveGrabber(finalX, finalY, GrabberController::SPEED_SLOW);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
+        if (p > 0) p--;
+        finalX = curDevice.center.x + explorePath[p][1] * shortEdgeStep[0] + explorePath[p][0] * longEdgeStep[0];
+        finalY = curDevice.center.y + explorePath[p][1] * shortEdgeStep[1] + explorePath[p][0] * longEdgeStep[1];
+        grabberController->moveGrabber(finalX, finalY, GrabberController::SPEED_SLOW);
 
         grabberController->detachGrabber();
 
