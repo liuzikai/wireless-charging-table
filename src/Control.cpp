@@ -106,7 +106,13 @@ int Control::scheduleWaiting() {
 
                     // A device is removed/finished charging
                 case ChargerManager::NOT_CHARGING: {
-                    auto curDevice = chargeable.find(curCoilPositions[i]);
+                    
+                    
+                    auto curDevice = chargeable.begin();
+                    for ( ; curDevice != chargeable.end(); curDevice++){
+                        if (curDevice->second.coor == curCoilPositions[i]) break;
+                    }
+
                     if (curDevice != chargeable.end()) {
                         unchargeable.emplace(*curDevice); // would be handled if the device is removed
                         chargeable.erase(curDevice->first);
