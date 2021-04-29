@@ -65,7 +65,7 @@ private:
     // member variable 
     int blur_kernel_size_ = 9;
     int min_contour_area_ = 25000;
-    int max_contour_area_ = 10000000;
+    int max_contour_area_ = 1000000;
     // extend is the ratio between the contour area and the bounding box area
     float extend_threshold_ = 0.75;
     // smaller threshold means the pixel need to be dark enough to be set to light (so to be detected)
