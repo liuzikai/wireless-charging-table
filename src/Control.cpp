@@ -137,61 +137,64 @@ int Control::scheduleWaiting() {
     }
 
     // Pull for vision updates
-    vector<cv::RotatedRect> newDevices, removedDevices;
-    vision->fetchDeviceDiff(newDevices, removedDevices);
+    if (idleCoilCount() > 0){
+        vector<cv::RotatedRect> newDevices, removedDevices;
+        vision->fetchDeviceDiff(newDevices, removedDevices);
 
-    for (const auto &newDevice : newDevices) {
-        // Check whether this new device should be ignored
-        if (toIgnore.find(newDevice.center) != toIgnore.end()) {
-            toIgnore.erase(newDevice.center);
-            continue;
+        for (const auto &newDevice : newDevices) {
+            // Check whether this new device should be ignored
+            if (toIgnore.find(newDevice.center) != toIgnore.end()) {
+                toIgnore.erase(newDevice.center);
+                continue;
+            }
+
+            toSchedule.insert(newDevice);
         }
 
-        toSchedule.insert(newDevice);
-    }
+        for (const auto &removedDevice : removedDevices) {
 
-    for (const auto &removedDevice : removedDevices) {
+            // Check the confirm: the removal has already been noticed by wireless charging
+            // FIXME: [liuzikai] coordination from curCoilPositions and from vision can hardly match exactly, use range compare
 
-        // Check the confirm: the removal has already been noticed by wireless charging
-        // FIXME: [liuzikai] coordination from curCoilPositions and from vision can hardly match exactly, use range compare
+            // if (toConfirm.find(removedDevice.center) != toConfirm.end()) {
 
-        // if (toConfirm.find(removedDevice.center) != toConfirm.end()) {
+            //     toConfirm.erase(removedDevice.center);
 
-        //     toConfirm.erase(removedDevice.center);
+            //     // The device was charging but taken away
+            //     // if (!chargeable.erase(removedDevice)) {
+            //     //     ERROR_("Chargeable map panic");
+            //     // }
 
-        //     // The device was charging but taken away
-        //     // if (!chargeable.erase(removedDevice)) {
-        //     //     ERROR_("Chargeable map panic");
-        //     // }
+            //     continue;
+            // }
 
-        //     continue;
-        // }
-
-        // Remove the device that is either unchargeable or not scheduled
-        if (!unchargeable.erase(removedDevice.center)) {
-            if (toSchedule.find(removedDevice) != toSchedule.end()) {
-                toSchedule.erase(removedDevice);
-//                    ERROR_("Unchargeable map or to schedule panic");
+            // Remove the device that is either unchargeable or not scheduled
+            if (!unchargeable.erase(removedDevice.center)) {
+                if (toSchedule.find(removedDevice) != toSchedule.end()) {
+                    toSchedule.erase(removedDevice);
+    //                    ERROR_("Unchargeable map or to schedule panic");
+                }
             }
         }
+
+
+        // if (toIgnore.size() != 0){
+        //     ERROR_("Conflict message from wireless and vision!");
+        // }
+
+        // Mark the remaining toConfirm devices as unchargeable (finished charging)
+        // for (const auto &confirm : toConfirm) {
+        //     auto curDevice = chargeable.find(confirm);
+
+        //     if (curDevice != chargeable.end()) {
+        //         unchargeable.emplace(*curDevice);
+        //         chargeable.erase(curDevice->first);
+        //     } else {
+        //         ERROR_("Conflict message from wireless and vision!");
+        //     }
+        // }
     }
-
-
-    // if (toIgnore.size() != 0){
-    //     ERROR_("Conflict message from wireless and vision!");
-    // }
-
-    // Mark the remaining toConfirm devices as unchargeable (finished charging)
-    // for (const auto &confirm : toConfirm) {
-    //     auto curDevice = chargeable.find(confirm);
-
-    //     if (curDevice != chargeable.end()) {
-    //         unchargeable.emplace(*curDevice);
-    //         chargeable.erase(curDevice->first);
-    //     } else {
-    //         ERROR_("Conflict message from wireless and vision!");
-    //     }
-    // }
+    
 
     needMoving |= !toSchedule.empty() && idleCoilCount() > 0;
     if (needMoving) {
@@ -302,7 +305,7 @@ int Control::scheduleMoving1() {
         grabberController->moveGrabber(c.second.x, c.second.y);
         grabberController->detachGrabber();
         curCoilPositions[c.first] = {c.second.x, c.second.y};
-        sleep(5);  // TODO: guarantee to finish!
+        sleep(4);  // TODO: guarantee to finish!
     }
 
     // Send the moving commands for new devices
