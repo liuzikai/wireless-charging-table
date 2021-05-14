@@ -33,7 +33,7 @@ public:
     /**
      * The number of charger
      */
-    static constexpr unsigned CHARGER_COUNT = 1;  // TODO: extend to 3 chargers
+    static constexpr unsigned CHARGER_COUNT = 3;
 
     /**
      * Wait for this time if the status is UNKNOWN
@@ -52,8 +52,8 @@ private:
     int green[CHARGER_COUNT] = {0};
 
     // The pin numbers for coil status input in BCM mode (see the datasheet)
-    static constexpr int RED_PINS[CHARGER_COUNT] = {9};
-    static constexpr int GREEN_PINS[CHARGER_COUNT] = {10};
+    static constexpr int RED_PINS[CHARGER_COUNT] = {6, 9, 22};
+    static constexpr int GREEN_PINS[CHARGER_COUNT] = {5, 10, 27};
 
     static constexpr unsigned UPDATE_INTERVAL_MS = 100;  // [ms]
 
