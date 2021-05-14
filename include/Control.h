@@ -102,8 +102,8 @@ private:
     std::queue<std::pair<int, cv::Point> > movingOldCommands; // (coil index, target) for rescheduled old devices
     std::queue<std::pair<int, cv::Point> > movingIdleCommands; // (coil index, target) for moving idle coils to initial position
 
-    cv::Point initialPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0)};
-    cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0)};
+    cv::Point initialPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0), cv::Point(340, 0), cv::Point(0, 350)};
+    cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0), cv::Point(340, 0), cv::Point(0, 350)};
 
     // For wireless charging subsystem
     ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT] = {ChargerManager::NOT_CHARGING};
