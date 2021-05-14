@@ -63,6 +63,8 @@ int Control::launch() {
 
 int Control::scheduleWaiting() {
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
     bool needMoving = false;
     set<cv::Point, PointLess> toIgnore;   // filled when new status is CHARGING
     // set<cv::Point, PointLess> toConfirm;  // filled when new status is NOT_CHARGING
@@ -328,6 +330,7 @@ int Control::scheduleMoving1() {
 
         // Update the status according to wireless read
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(750));
         auto curStatus = chargerManager->getChargerStatus(c.first);
 
         if (curStatus != ChargerManager::CHARGING) {
@@ -369,7 +372,7 @@ int Control::scheduleMoving1() {
                 finalX = curDevice.center.x + explorePath[p][1] * shortEdgeStep[0] + explorePath[p][0] * longEdgeStep[0];
                 finalY = curDevice.center.y + explorePath[p][1] * shortEdgeStep[1] + explorePath[p][0] * longEdgeStep[1];
                 grabberController->moveGrabber(finalX, finalY, GrabberController::SPEED_SLOW);
-                // std::this_thread::sleep_for(std::chrono::milliseconds(750));
+                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 curStatus = chargerManager->getChargerStatus(c.first);
                 if (curStatus == ChargerManager::CHARGING) break;
             }
@@ -448,7 +451,7 @@ int Control::scheduleMoving1() {
 
 
         // sleep(10); // TODO: guarantee to finish!
-
+        std::this_thread::sleep_for(std::chrono::milliseconds(750));
         auto curStatus = chargerManager->getChargerStatus(c.first);
 
         if (curStatus != ChargerManager::CHARGING) {
