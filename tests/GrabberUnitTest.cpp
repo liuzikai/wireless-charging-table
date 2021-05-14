@@ -16,11 +16,13 @@ int main() {
         std::cin >> x;
         if (x == -1) {
             grabber.resetGrabber();
+            std::cout << "Done";
         } else if (x == -2) {
             break;
         } else {
             std::cin >> y;
             grabber.moveGrabber(x, y);
+            std::cout << "Done";
         }
     }
     return 0;

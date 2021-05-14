@@ -56,7 +56,13 @@ private:
     static constexpr float Z_DETACHED = 30;
     static constexpr float Z_ATTACHED = 50;
 
-    void waitForOK(const string &s);
+    bool waitForReachingTarget(float x, float y, float z);
+
+    string waitForLine();
+
+    string clearRead();
+
+    void clearInputBuffer();
 };
 
 
