@@ -106,7 +106,7 @@ private:
     cv::Point curCoilPositions[ChargerManager::CHARGER_COUNT] = {cv::Point(0, 0), cv::Point(340, 0), cv::Point(0, 350)};
 
     // For wireless charging subsystem
-    ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT] = {ChargerManager::NOT_CHARGING};
+    ChargerManager::Status oldStatus[ChargerManager::CHARGER_COUNT] = {ChargerManager::NOT_CHARGING, ChargerManager::NOT_CHARGING, ChargerManager::NOT_CHARGING};
     int idleCoilCount() const {
         int ret = 0;
         for (const auto &status : oldStatus) if (status == ChargerManager::NOT_CHARGING) ret++;
