@@ -256,15 +256,6 @@ int Control::scheduleCalculating() {
             curSchedule.erase(targetPoint);
         }
 
-        // Fill the moving queue TODO: also change the order of the coilTarget map
-        // Order: to avoid coil conflict, the devices with no coil under it are scheduled first
-        // Start with a new devices (garentee to have no coil under it)
-        // for (const auto& newSche : schedulingNew){
-        //     auto curTarget = coilTarget[newSche];
-        //     movingCommands.push(make_pair(curTarget.second, curTarget.first));
-
-        // }
-
 
         for (const auto &target : coilTarget) {
             if (newDeviceMapping.find(target.second) != newDeviceMapping.end()) {
