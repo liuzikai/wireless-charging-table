@@ -256,15 +256,6 @@ int Control::scheduleCalculating() {
             curSchedule.erase(targetPoint);
         }
 
-        // Fill the moving queue TODO: also change the order of the coilTarget map
-        // Order: to avoid coil conflict, the devices with no coil under it are scheduled first
-        // Start with a new devices (garentee to have no coil under it)
-        // for (const auto& newSche : schedulingNew){
-        //     auto curTarget = coilTarget[newSche];
-        //     movingCommands.push(make_pair(curTarget.second, curTarget.first));
-
-        // }
-
 
         for (const auto &target : coilTarget) {
             if (newDeviceMapping.find(target.second) != newDeviceMapping.end()) {
@@ -385,16 +376,6 @@ int Control::scheduleMoving1() {
 
         grabberController->detachGrabber();
 
-        // // Retry for once if the status is unknown
-        // if (curStatus == ChargerManager::UNKNOWN) {
-        //     usleep(1000000);
-        //     curStatus = chargerManager->getChargerStatus(c.first);
-
-        //     if (curStatus == ChargerManager::UNKNOWN) {
-        //         ERROR_("Pull charging status failed");
-        //     }
-        // }
-
         // 4 cases for wireless coil status change {Charging, Not charging} -> {Charging, Not charging}
         // According to the notes, they can be merged. Only the final status matter
 
@@ -432,6 +413,19 @@ int Control::scheduleMoving1() {
     while (!movingOldCommands.empty()) {
         auto c = movingOldCommands.front();
         movingOldCommands.pop();
+
+        // Check for collision
+        bool collision = false;
+        for (int i = 0; i < ChargerManager::CHARGER_COUNT; i++){
+            auto &coil = curCoilPositions[i];
+            if (coil.x == c.second.x && coil.y == c.second.y){
+                collision = true;
+                movingOldCommands.push(c);
+                break;
+            }
+        }
+        if (collision) continue; 
+
         auto &coil = curCoilPositions[c.first];
         grabberController->moveGrabber(coil.x, coil.y, GrabberController::SPEED_FAST);
         grabberController->moveGrabber(c.second.x, c.second.y);
