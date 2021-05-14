@@ -296,7 +296,7 @@ int Control::scheduleMoving1() {
         grabberController->moveGrabber(c.second.x, c.second.y);
         grabberController->detachGrabber();
         curCoilPositions[c.first] = {c.second.x, c.second.y};
-        sleep(4);  // TODO: guarantee to finish!
+        // sleep(4);  // TODO: guarantee to finish!
     }
 
     // Send the moving commands for new devices
@@ -316,7 +316,7 @@ int Control::scheduleMoving1() {
         grabberController->moveGrabber(finalX, finalY);
 
         // Wait until complete and check the final wireless charging status
-        sleep(7); // TODO: guarantee to finish!
+        // sleep(7); // TODO: guarantee to finish!
 
         // Update the status according to wireless read
 
@@ -361,7 +361,7 @@ int Control::scheduleMoving1() {
                 finalX = curDevice.center.x + explorePath[p][1] * shortEdgeStep[0] + explorePath[p][0] * longEdgeStep[0];
                 finalY = curDevice.center.y + explorePath[p][1] * shortEdgeStep[1] + explorePath[p][0] * longEdgeStep[1];
                 grabberController->moveGrabber(finalX, finalY, GrabberController::SPEED_SLOW);
-                std::this_thread::sleep_for(std::chrono::milliseconds(750));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(750));
                 curStatus = chargerManager->getChargerStatus(c.first);
                 if (curStatus == ChargerManager::CHARGING) break;
             }
@@ -432,7 +432,7 @@ int Control::scheduleMoving1() {
         grabberController->detachGrabber();
         curCoilPositions[c.first] = {c.second.x, c.second.y};
 
-        sleep(10); // TODO: guarantee to finish!
+        // sleep(10); // TODO: guarantee to finish!
 
         auto curStatus = chargerManager->getChargerStatus(c.first);
 
@@ -460,7 +460,7 @@ int Control::scheduleMoving1() {
         curState = CALCULATING;
     } else {
         grabberController->resetGrabber();
-        sleep(5);
+        // sleep(5);
         curState = WAITING;
     }
 
