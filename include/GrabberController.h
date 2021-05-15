@@ -49,20 +49,15 @@ private:
     static constexpr const char *SERIAL_DEVICE_PREFIX = "/dev/ttyACM";
     static constexpr int SERIAL_BAUD_RATE = 115200;
 
-    void serialSendCommand(const string &s);
-
     static constexpr unsigned FLOAT_PRECISION = 1;
 
     static constexpr float Z_DETACHED = 30;
     static constexpr float Z_ATTACHED = 50;
 
-    bool waitForReachingTarget(float x, float y, float z);
-
     string waitForLine();
 
     string clearRead();
 
-    void clearInputBuffer();
 };
 
 
