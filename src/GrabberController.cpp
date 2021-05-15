@@ -38,7 +38,10 @@ GrabberController::GrabberController()
 }
 
 void GrabberController::moveGrabber(float x, float y, unsigned speed) {
+//    std::cout << "=> " << x << ", " << y << ", " << speed << std::endl;
     issueMoveCommand(speed, x, y, Z_ATTACHED);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+//    std::cout << "=> Done " << x << ", " << y << ", " << speed << std::endl;
 }
 
 void GrabberController::detachGrabber() {

@@ -63,6 +63,8 @@ int Control::launch() {
 
 int Control::scheduleWaiting() {
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
     bool needMoving = false;
     set<cv::Point, PointLess> toIgnore;   // filled when new status is CHARGING
     // set<cv::Point, PointLess> toConfirm;  // filled when new status is NOT_CHARGING
@@ -153,21 +155,6 @@ int Control::scheduleWaiting() {
 
         for (const auto &removedDevice : removedDevices) {
 
-            // Check the confirm: the removal has already been noticed by wireless charging
-            // FIXME: [liuzikai] coordination from curCoilPositions and from vision can hardly match exactly, use range compare
-
-            // if (toConfirm.find(removedDevice.center) != toConfirm.end()) {
-
-            //     toConfirm.erase(removedDevice.center);
-
-            //     // The device was charging but taken away
-            //     // if (!chargeable.erase(removedDevice)) {
-            //     //     ERROR_("Chargeable map panic");
-            //     // }
-
-            //     continue;
-            // }
-
             // Remove the device that is either unchargeable or not scheduled
             if (!unchargeable.erase(removedDevice.center)) {
                 if (toSchedule.find(removedDevice) != toSchedule.end()) {
@@ -222,6 +209,10 @@ int Control::scheduleCalculating() {
 //        schedulingNew.insert(curDevice.center);
         toSchedule.erase(curDevice);
         availableCoils--;
+
+        cerr << "Schedule New Device at ("
+            << curDevice.center.x << ", "
+            << curDevice.center.y << ")" << endl;
     }
 
     // New device to schedule
@@ -233,6 +224,9 @@ int Control::scheduleCalculating() {
             if (oldStatus[i] == ChargerManager::CHARGING) {
                 curSchedule.insert(curCoilPositions[i]);
 //                schedulingOld.insert(curCoilPositions[i]);
+                cerr << "Schedule Old Device at ("
+                     << curCoilPositions[i].x << ", "
+                     << curCoilPositions[i].y << ")" << endl;
             }
         }
 
@@ -245,6 +239,7 @@ int Control::scheduleCalculating() {
             double minDist = INFINITY;
             for (const auto &point : curSchedule) {
                 double dist = cv::norm(initialPositions[i] - point);
+//                cerr << "Distance to coil " << i <<": " << dist << endl;
                 if (dist < minDist) {
                     targetPoint = point;
                     minDist = dist;
@@ -254,13 +249,21 @@ int Control::scheduleCalculating() {
             // Add the device with the smallest distance to be the target
             if (targetPoint != curCoilPositions[i]) coilTarget.insert(make_pair(i, targetPoint));
             curSchedule.erase(targetPoint);
+            if (curSchedule.empty()) break;
         }
 
 
         for (const auto &target : coilTarget) {
             if (newDeviceMapping.find(target.second) != newDeviceMapping.end()) {
+                cerr << "Confirm New Device at ("
+                     << newDeviceMapping[target.second].center.x << ", "
+                     << newDeviceMapping[target.second].center.y << ")" << endl;
                 movingCommands.push(make_pair(target.first, newDeviceMapping[target.second]));
             } else {
+                cerr << "Confirm Old Device at ("
+                     << target.second.x << ", "
+                     << target.second.y << ")" << endl;
+
                 movingOldCommands.push(make_pair(target.first, target.second));
             }
         }
@@ -289,6 +292,8 @@ int Control::scheduleMoving1() {
 
     // Move the idle coils to initial first
     while (!movingIdleCommands.empty()) {
+        cerr << "Moving idle coils" << endl;
+
         auto c = movingIdleCommands.front();
         movingIdleCommands.pop();
         auto &coil = curCoilPositions[c.first];
@@ -296,11 +301,12 @@ int Control::scheduleMoving1() {
         grabberController->moveGrabber(c.second.x, c.second.y);
         grabberController->detachGrabber();
         curCoilPositions[c.first] = {c.second.x, c.second.y};
-        sleep(4);  // TODO: guarantee to finish!
+        // sleep(4);  // TODO: guarantee to finish!
     }
 
     // Send the moving commands for new devices
     while (!movingCommands.empty()) {
+        cerr << "Scheduling new devices" << endl;
 
         // Issue the command
         auto c = movingCommands.front();
@@ -313,17 +319,22 @@ int Control::scheduleMoving1() {
         float finalX = curDevice.center.x;
         float finalY = curDevice.center.y;
 
+        cerr << "Move coil " << c.first
+            << " from (" << coil.x << ", " << coil.y << ")"
+            << " to (" << finalX << ", " << finalY << ")" << endl;
+
         grabberController->moveGrabber(finalX, finalY);
 
         // Wait until complete and check the final wireless charging status
-        sleep(7); // TODO: guarantee to finish!
+        // sleep(7); // TODO: guarantee to finish!
 
         // Update the status according to wireless read
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(750));
         auto curStatus = chargerManager->getChargerStatus(c.first);
 
         if (curStatus != ChargerManager::CHARGING) {
-
+            cerr << "Exploring" << endl;
             // Explore
             float longEdge, shortEdge;
             float angle;  // angle from X to shortEdge
@@ -361,7 +372,7 @@ int Control::scheduleMoving1() {
                 finalX = curDevice.center.x + explorePath[p][1] * shortEdgeStep[0] + explorePath[p][0] * longEdgeStep[0];
                 finalY = curDevice.center.y + explorePath[p][1] * shortEdgeStep[1] + explorePath[p][0] * longEdgeStep[1];
                 grabberController->moveGrabber(finalX, finalY, GrabberController::SPEED_SLOW);
-                std::this_thread::sleep_for(std::chrono::milliseconds(750));
+                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 curStatus = chargerManager->getChargerStatus(c.first);
                 if (curStatus == ChargerManager::CHARGING) break;
             }
@@ -411,6 +422,8 @@ int Control::scheduleMoving1() {
 
     // Move for the rescheduled devices
     while (!movingOldCommands.empty()) {
+        cerr << "Rescheduling old devices" << endl;
+
         auto c = movingOldCommands.front();
         movingOldCommands.pop();
 
@@ -432,8 +445,13 @@ int Control::scheduleMoving1() {
         grabberController->detachGrabber();
         curCoilPositions[c.first] = {c.second.x, c.second.y};
 
-        sleep(10); // TODO: guarantee to finish!
+        cerr << "Move coil " << c.first
+             << " from (" << coil.x << ", " << coil.y << ")"
+             << " to (" << c.second.x << ", " << c.second.y << ")" << endl;
 
+
+        // sleep(10); // TODO: guarantee to finish!
+        std::this_thread::sleep_for(std::chrono::milliseconds(750));
         auto curStatus = chargerManager->getChargerStatus(c.first);
 
         if (curStatus != ChargerManager::CHARGING) {
@@ -460,7 +478,7 @@ int Control::scheduleMoving1() {
         curState = CALCULATING;
     } else {
         grabberController->resetGrabber();
-        sleep(5);
+        // sleep(5);
         curState = WAITING;
     }
 
