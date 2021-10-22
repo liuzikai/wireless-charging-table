@@ -1,15 +1,45 @@
-This is SP21 ECE445/ME470 code for team 24 at ZJUI
+Qi Wireless Charging Table with Automatic Alignment
+===================================================
 
-## GPIO Connections
+Code for ECE445/ME470 Senior Design Project SP21 at ZJUI.
+
+**Team 24: Kaiwen Cao, Tianyi Han, Tingkai Liu, Zikai Liu**
+
+## Demo Demo
+![Demo](extra/demo.gif)
+
+## Features
+* Charge 3 Qi-Compatible devices placed on the table concurrently.
+* Automatically align charging coils with mechanical system and computer vision.
+* Phone cases up to ~2mm thick are allowed.
+* Detection and memorization of Qi-incompatible device.
+* Maximal 15W power supply to each device.
+
+2021.10.22 Update: similar idea but cooler design :smiley: => [【何同学】我做了苹果放弃的产品...-哔哩哔哩](https://b23.tv/qSWOcm)
+
+## Design
+=> [Final Presentation](extra/final-presentation.pdf)
+
+=> [Final Report](extra/final-report.pdf)
+
+![Mechanism](extra/mechanism.gif)
+
+![Block Diagram](extra/block-diagram.png)
+
+## Setup on Jetson Nano
+
+Ubuntu 18.04 for Jetson Nano has OpenCV 4.1.1 pre-installed.
+
+### GPIO Connections
 | Charger | Red Pin | Green Pin |
 |---------|---------|-----------|
 | 0       | 9       | 10        |
 
 GPIO pins are indexed in BCM mode:
 
-![Jetson Nano Pins](extra/JetsonNano-expansion-pinout.png)
+=> [Jetson Nano Pin Layout](extra/JetsonNano-expansion-pinout.png)
 
-## Setup GPIO Permission on Jetson Nano
+### Setup GPIO Permission on Jetson Nano
 Adapted from [JetsonGPIO README](https://github.com/pjueon/JetsonGPIO#setting-user-permissions)
 
 In order to use the Jetson GPIO Library, the correct user permissions/groups must  
@@ -32,10 +62,6 @@ rules by running:
 ```
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
-
-## Setup on Jetson Nano
-
-Ubuntu 18.04 for Jetson Nano has OpenCV 4.1.1 pre-installed.
 
 ### Install Boost
 The Boost library from apt-get of Ubuntu 18.04 is too old. Building from source can be time-consuming as Jetson Nano
