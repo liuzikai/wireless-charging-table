@@ -1,7 +1,7 @@
 Qi Wireless Charging Table with Automatic Alignment
 ===================================================
 
-Code for ECE445/ME470 Senior Design Project SP21 at ZJUI.
+Code and CAD of our ECE445/ME470 Senior Design Project SP21 at ZJUI.
 
 **Team 24: Kaiwen Cao, Tianyi Han, Tingkai Liu, Zikai Liu**
 
