@@ -77,6 +77,7 @@ If the error `dpkg-deb: error: paste subprocess was killed by signal (Broken pip
 ```shell
 sudo dpkg -i --force-overwrite /var/cache/apt/archives/libboost1.74-dev_1.74-0~16~ubuntu18.04.1_arm64.deb
 sudo apt install -f libboost1.74-dev
+```
 
 ## Build
 ```shell
